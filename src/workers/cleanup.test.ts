@@ -18,6 +18,7 @@ describe("cleanup worker", () => {
         prepare: vi.fn().mockReturnValue(statement),
       } as unknown as D1Database,
       IMAGES_BUCKET: {} as R2Bucket,
+      IMAGES: {} as ImagesBinding,
       APP_ENV: "production",
       IMAGE_EXPIRE_DAYS: "7",
       SESSION_SECRET: "secret",

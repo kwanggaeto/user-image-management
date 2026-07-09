@@ -63,6 +63,7 @@ class FakeStorage implements ImageStorage {
 const env = {
   DB: {} as D1Database,
   IMAGES_BUCKET: {} as R2Bucket,
+  IMAGES: {} as ImagesBinding,
   APP_ENV: "development",
   IMAGE_EXPIRE_DAYS: "7",
   SESSION_SECRET: "0123456789abcdef0123456789abcdef",

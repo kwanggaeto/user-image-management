@@ -1,6 +1,22 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { CloudflareEnv } from "@/types/cloudflare";
 
+function createUnavailableImagesBinding(): ImagesBinding {
+  const unavailable = () => {
+    throw new Error("Cloudflare Images binding is unavailable outside Wrangler.");
+  };
+
+  return {
+    info: unavailable,
+    input: unavailable,
+    hosted: {
+      image: unavailable,
+      upload: unavailable,
+      list: unavailable,
+    },
+  };
+}
+
 export function getCloudflareEnv(): CloudflareEnv {
   try {
     return getCloudflareContext().env as CloudflareEnv;
@@ -8,6 +24,7 @@ export function getCloudflareEnv(): CloudflareEnv {
     return {
       DB: undefined as unknown as D1Database,
       IMAGES_BUCKET: undefined as unknown as R2Bucket,
+      IMAGES: createUnavailableImagesBinding(),
       APP_ENV: process.env.APP_ENV === "production" ? "production" : "development",
       IMAGE_EXPIRE_DAYS: process.env.IMAGE_EXPIRE_DAYS ?? "7",
       SESSION_SECRET:

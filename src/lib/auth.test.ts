@@ -5,6 +5,7 @@ import { getAdminCredential, signSession, verifySession } from "./auth";
 const env: CloudflareEnv = {
   DB: {} as D1Database,
   IMAGES_BUCKET: {} as R2Bucket,
+  IMAGES: {} as ImagesBinding,
   APP_ENV: "development",
   IMAGE_EXPIRE_DAYS: "7",
   SESSION_SECRET: "0123456789abcdef0123456789abcdef",

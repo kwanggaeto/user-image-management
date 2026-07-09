@@ -3,6 +3,7 @@ export type AppEnv = "development" | "production";
 export interface CloudflareEnv {
   DB: D1Database;
   IMAGES_BUCKET: R2Bucket;
+  IMAGES: ImagesBinding;
   APP_ENV: AppEnv;
   IMAGE_EXPIRE_DAYS: string;
   SESSION_SECRET: string;

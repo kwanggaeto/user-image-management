@@ -31,6 +31,9 @@
       "bucket_name": "user-image-management-images"
     }
   ],
+  "images": {
+    "binding": "IMAGES"
+  },
   "observability": {
     "enabled": true
   }
