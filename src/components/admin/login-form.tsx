@@ -121,7 +121,7 @@ export function LoginForm({ category }: LoginFormProps) {
                   </FieldDescription>
                 )}
               </Field>
-              <div className="grid gap-3 rounded-md border bg-muted/20 p-3 text-sm">
+              <div className="flex flex-col gap-3 rounded-md border bg-muted/20 p-3 text-sm">
                 <label
                   htmlFor="remember-login"
                   className="flex cursor-pointer items-center gap-2"
