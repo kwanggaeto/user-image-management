@@ -71,12 +71,39 @@ class FakeStorage implements ImageStorage {
   }
 }
 
+class FakeThumbnailGenerator implements ThumbnailGenerator {
+  calls: Blob[] = [];
+
+  async generate(file: Blob): Promise<Blob> {
+    this.calls.push(file);
+    return new Response("thumbnail", {
+      headers: { "Content-Type": "image/webp" },
+    }).blob();
+  }
+}
+
+class FakeUsageRepository implements UsageRepository {
+  records: Array<{ category: Category; createdAt: string }> = [];
+
+  async insert(record: { category: Category; createdAt: string }): Promise<void> {
+    this.records.push(record);
+  }
+
+  async summarize() {
+    return { period: "day" as const, total: this.records.length, buckets: [] };
+  }
+}
+
 let repository: FakeRepository;
 let storage: FakeStorage;
+let thumbnailGenerator: FakeThumbnailGenerator;
+let usageRepository: FakeUsageRepository;
 
 beforeEach(() => {
   repository = new FakeRepository();
   storage = new FakeStorage();
+  thumbnailGenerator = new FakeThumbnailGenerator();
+  usageRepository = new FakeUsageRepository();
 });
 
 describe("createImage", () => {
@@ -84,6 +111,8 @@ describe("createImage", () => {
     const result = await createImage({
       repository,
       storage,
+      thumbnailGenerator,
+      usageRepository,
       category: "library",
       uid: "abc123",
       filename: "photo.jpg",
@@ -97,11 +126,22 @@ describe("createImage", () => {
       category: "library",
       filename: "photo.jpg",
       key: "images/library/abc123/photo.jpg",
-      thumbnailKey: null,
+      thumbnailKey: "images/library/abc123/thumbnail.webp",
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
-    expect(storage.objects.has("images/library/abc123/photo.jpg")).toBe(true);
+    expect([...storage.objects.keys()]).toEqual([
+      "images/library/abc123/photo.jpg",
+      "images/library/abc123/thumbnail.webp",
+    ]);
+    await expect(
+      new Response(
+        storage.objects.get("images/library/abc123/thumbnail.webp"),
+      ).text(),
+    ).resolves.toBe("thumbnail");
+    expect(usageRepository.records).toEqual([
+      { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
+    ]);
   });
 });
 
@@ -132,7 +172,7 @@ describe("listImages", () => {
     expect(result.totalPages).toBe(1);
     expect(result.items[0]?.uid).toBe("library-1");
     expect(result.items[0]?.thumbnailUrl).toBe(
-      "/api/library/images/library-1/file",
+      "/api/library/images/library-1/thumbnail",
     );
   });
 });
@@ -160,7 +200,7 @@ describe("deleteImage", () => {
       category: "library",
       filename: "a.jpg",
       key: "images/library/abc123/a.jpg",
-      thumbnailKey: null,
+      thumbnailKey: "images/library/abc123/thumbnail.webp",
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -168,8 +208,28 @@ describe("deleteImage", () => {
     const result = await deleteImage(repository, storage, "library", "abc123");
 
     expect(result).toBe(true);
-    expect(storage.deleted).toEqual(["images/library/abc123/a.jpg"]);
+    expect(storage.deleted).toEqual([
+      "images/library/abc123/a.jpg",
+      "images/library/abc123/thumbnail.webp",
+    ]);
     expect(await repository.findByUid("library", "abc123")).toBeNull();
+  });
+
+  test("deletes only the original object for legacy rows without thumbnails", async () => {
+    await repository.insert({
+      uid: "legacy",
+      category: "library",
+      filename: "a.jpg",
+      key: "images/library/legacy/a.jpg",
+      thumbnailKey: null,
+      createAt: "2026-07-09T09:00:00.000+09:00",
+      expireAt: "2026-07-16T09:00:00.000+09:00",
+    });
+
+    const result = await deleteImage(repository, storage, "library", "legacy");
+
+    expect(result).toBe(true);
+    expect(storage.deleted).toEqual(["images/library/legacy/a.jpg"]);
   });
 
   test("returns false when the uid is not in the requested category", async () => {
@@ -196,7 +256,7 @@ describe("cleanupExpiredImages", () => {
       category: "library",
       filename: "old.jpg",
       key: "images/library/expired/old.jpg",
-      thumbnailKey: null,
+      thumbnailKey: "images/library/expired/thumbnail.webp",
       createAt: "2026-07-01T09:00:00.000+09:00",
       expireAt: "2026-07-08T09:00:00.000+09:00",
     });
@@ -217,7 +277,10 @@ describe("cleanupExpiredImages", () => {
     });
 
     expect(result).toEqual({ scanned: 1, deleted: 1, failed: 0 });
-    expect(storage.deleted).toEqual(["images/library/expired/old.jpg"]);
+    expect(storage.deleted).toEqual([
+      "images/library/expired/old.jpg",
+      "images/library/expired/thumbnail.webp",
+    ]);
     expect(await repository.findByUid("library", "expired")).toBeNull();
     expect(await repository.findByUid("library", "active")).not.toBeNull();
   });
