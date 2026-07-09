@@ -28,6 +28,7 @@ function toImageRecord(row: unknown): ImageRecord {
     category: value.category,
     filename: String(value.filename),
     key: String(value.key),
+    thumbnailKey: value.thumbnailKey ? String(value.thumbnailKey) : null,
     createAt: String(value.createAt),
     expireAt: String(value.expireAt),
   };

@@ -6,6 +6,7 @@ export interface ImageRecord {
   category: Category;
   filename: string;
   key: string;
+  thumbnailKey: string | null;
   createAt: string;
   expireAt: string;
 }
@@ -27,6 +28,41 @@ export interface ImageStorage {
   put(key: string, file: Blob): Promise<void>;
   get(key: string): Promise<Blob | null>;
   delete(key: string): Promise<void>;
+}
+
+export interface ThumbnailGenerator {
+  generate(input: Blob): Promise<Blob>;
+}
+
+export type UsagePeriod = "day" | "month" | "year";
+
+export interface UsageRecordInput {
+  category: Category;
+  createdAt: string;
+}
+
+export interface UsageSummaryBucket {
+  label: string;
+  count: number;
+  cumulative: number;
+}
+
+export interface UsageSummary {
+  period: UsagePeriod;
+  total: number;
+  buckets: UsageSummaryBucket[];
+}
+
+export interface UsageRepository {
+  insert(record: UsageRecordInput): Promise<void>;
+  summarize(category: Category, period: UsagePeriod): Promise<UsageSummary>;
+}
+
+export class DuplicateImageUidError extends Error {
+  constructor() {
+    super("Duplicate image uid");
+    this.name = "DuplicateImageUidError";
+  }
 }
 
 export interface ImageListItem extends ImageRecord {

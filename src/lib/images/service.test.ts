@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import type { Category } from "@/lib/categories";
-import type { ImageRecord, ImageRepository, ImageStorage } from "./types";
+import type {
+  ImageRecord,
+  ImageRepository,
+  ImageStorage,
+  ThumbnailGenerator,
+  UsageRepository,
+} from "./types";
 import {
   cleanupExpiredImages,
   createImage,
@@ -91,6 +97,7 @@ describe("createImage", () => {
       category: "library",
       filename: "photo.jpg",
       key: "images/library/abc123/photo.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -105,6 +112,7 @@ describe("listImages", () => {
       category: "library",
       filename: "a.jpg",
       key: "images/library/library-1/a.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -113,6 +121,7 @@ describe("listImages", () => {
       category: "nakdong",
       filename: "b.jpg",
       key: "images/nakdong/nakdong-1/b.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -135,6 +144,7 @@ describe("getImage", () => {
       category: "nakdong",
       filename: "a.jpg",
       key: "images/nakdong/same/a.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -150,6 +160,7 @@ describe("deleteImage", () => {
       category: "library",
       filename: "a.jpg",
       key: "images/library/abc123/a.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -167,6 +178,7 @@ describe("deleteImage", () => {
       category: "nakdong",
       filename: "a.jpg",
       key: "images/nakdong/same/a.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
@@ -184,6 +196,7 @@ describe("cleanupExpiredImages", () => {
       category: "library",
       filename: "old.jpg",
       key: "images/library/expired/old.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-01T09:00:00.000+09:00",
       expireAt: "2026-07-08T09:00:00.000+09:00",
     });
@@ -192,6 +205,7 @@ describe("cleanupExpiredImages", () => {
       category: "library",
       filename: "new.jpg",
       key: "images/library/active/new.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-10T09:00:00.000+09:00",
     });

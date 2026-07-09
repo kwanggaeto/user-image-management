@@ -30,6 +30,7 @@ export async function createImage(input: {
     category: input.category,
     filename,
     key,
+    thumbnailKey: null,
     createAt: timestamps.createAt,
     expireAt: timestamps.expireAt,
   });

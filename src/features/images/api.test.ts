@@ -192,6 +192,7 @@ describe("handleLogin and session-gated list", () => {
       category: "library",
       filename: "photo.jpg",
       key: "images/library/abc123/photo.jpg",
+      thumbnailKey: null,
       createAt: "2026-07-09T09:00:00.000+09:00",
       expireAt: "2026-07-16T09:00:00.000+09:00",
     });
