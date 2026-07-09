@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "user-image-management",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-09",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "user-image-management"
+    }
+  ],
+  "vars": {
+    "APP_ENV": "production",
+    "IMAGE_EXPIRE_DAYS": "7"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "user-image-management",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES_BUCKET",
+      "bucket_name": "user-image-management-images"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

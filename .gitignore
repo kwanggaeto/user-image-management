@@ -27,10 +27,22 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.local
+.env.production
+.dev.vars
 
 # vercel
 .vercel
 
+# cloudflare
+.wrangler/
+.open-next/
+cloudflare-env.d.ts
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# e2e
+test-results/
+playwright-report/
