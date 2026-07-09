@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 
+import { DownloadIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ImageRecord } from "@/lib/images/types";
 
 interface ImageViewerProps {
@@ -15,9 +17,17 @@ export function ImageViewer({ image }: ImageViewerProps) {
           alt={image.filename}
           className="max-h-[78dvh] w-full rounded-md object-contain"
         />
-        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{image.uid}</span>
-          <span>{image.createAt}</span>
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-foreground">{image.uid}</span>
+            <span>{image.createAt}</span>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/${image.category}/images/${image.uid}/download`}>
+              <DownloadIcon data-icon="inline-start" />
+              원본 다운로드
+            </a>
+          </Button>
         </div>
       </div>
     </main>
