@@ -27,13 +27,18 @@ export async function createImage(input: {
 }): Promise<ImageRecord> {
   const filename = sanitizeFilename(input.filename);
   const key = buildImageKey(input.category, input.uid, filename);
-  const thumbnailKey = input.thumbnailGenerator
+  let thumbnailKey = input.thumbnailGenerator
     ? buildThumbnailKey(input.category, input.uid)
     : null;
   const timestamps = createImageTimestamps(input.now, input.expireDays);
-  const thumbnail = input.thumbnailGenerator
-    ? await input.thumbnailGenerator.generate(input.file)
-    : null;
+  let thumbnail: Blob | null = null;
+  if (input.thumbnailGenerator) {
+    try {
+      thumbnail = await input.thumbnailGenerator.generate(input.file);
+    } catch {
+      thumbnailKey = null;
+    }
+  }
 
   const image = await input.repository.insert({
     uid: input.uid,

@@ -143,6 +143,33 @@ describe("createImage", () => {
       { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
     ]);
   });
+
+  test("continues upload without a thumbnail when thumbnail generation fails", async () => {
+    const result = await createImage({
+      repository,
+      storage,
+      thumbnailGenerator: {
+        async generate() {
+          throw new Error("Images binding unavailable");
+        },
+      },
+      usageRepository,
+      category: "library",
+      uid: "abc123",
+      filename: "photo.jpg",
+      file: new Blob(["image"], { type: "image/jpeg" }),
+      now: new Date("2026-07-09T00:00:00.000Z"),
+      expireDays: 7,
+    });
+
+    expect(result.thumbnailKey).toBeNull();
+    expect([...storage.objects.keys()]).toEqual([
+      "images/library/abc123/photo.jpg",
+    ]);
+    expect(usageRepository.records).toEqual([
+      { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
+    ]);
+  });
 });
 
 describe("listImages", () => {
