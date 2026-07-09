@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildImageKey, sanitizeFilename } from "./uid";
+import { buildImageKey, buildThumbnailKey, createUid, sanitizeFilename } from "./uid";
 
 describe("sanitizeFilename", () => {
   test("keeps safe filename characters", () => {
@@ -20,5 +20,19 @@ describe("buildImageKey", () => {
     expect(buildImageKey("library", "abc123", "한글 photo.jpg")).toBe(
       "images/library/abc123/photo.jpg",
     );
+  });
+});
+
+describe("buildThumbnailKey", () => {
+  test("builds a stable webp thumbnail key for the category uid", () => {
+    expect(buildThumbnailKey("nakdong", "abcd1234")).toBe(
+      "images/nakdong/abcd1234/thumbnail.webp",
+    );
+  });
+});
+
+describe("createUid", () => {
+  test("returns an 8 character lowercase hex uid", () => {
+    expect(createUid()).toMatch(/^[0-9a-f]{8}$/);
   });
 });

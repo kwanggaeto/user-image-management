@@ -20,8 +20,12 @@ export function buildImageKey(
   return `images/${category}/${uid}/${sanitizeFilename(filename)}`;
 }
 
+export function buildThumbnailKey(category: Category, uid: string): string {
+  return `images/${category}/${uid}/thumbnail.webp`;
+}
+
 export function createUid(): string {
-  const bytes = new Uint8Array(12);
+  const bytes = new Uint8Array(4);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
     "",
