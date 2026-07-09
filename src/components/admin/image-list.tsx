@@ -55,7 +55,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
   const canGoNext = data.page < data.totalPages;
 
   const title = useMemo(
-    () => (category === "library" ? "국립중앙도서관" : "낙동강"),
+    () => (category === "library" ? "국립중앙도서관" : "낙동강 개와 고양이 특별전"),
     [category],
   );
 
