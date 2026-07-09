@@ -7,6 +7,7 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      ".worktrees/**",
       ".open-next/**",
       ".wrangler/**",
       "cloudflare-env.d.ts",
