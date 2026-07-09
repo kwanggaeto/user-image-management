@@ -261,7 +261,7 @@ async function isAdminSession(input: HandlerBase): Promise<boolean> {
 export async function handleLogin(input: HandlerBase): Promise<Response> {
   const category = parseCategory(input.categoryValue);
   const body = (await input.request.json().catch(() => null)) as
-    | { id?: string; password?: string }
+    | { id?: string; password?: string; remember?: boolean }
     | null;
 
   if (!body?.id || !body.password) {
@@ -280,7 +280,11 @@ export async function handleLogin(input: HandlerBase): Promise<Response> {
     {
       status: 200,
       headers: {
-        "Set-Cookie": createSessionCookie(session, input.env.APP_ENV),
+        "Set-Cookie": createSessionCookie(
+          session,
+          input.env.APP_ENV,
+          body.remember === true,
+        ),
       },
     },
   );

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { CloudflareEnv } from "@/types/cloudflare";
-import { getAdminCredential, signSession, verifySession } from "./auth";
+import {
+  createSessionCookie,
+  getAdminCredential,
+  signSession,
+  verifySession,
+} from "./auth";
 
 const env: CloudflareEnv = {
   DB: {} as D1Database,
@@ -44,6 +49,18 @@ describe("sessions", () => {
     const cookie = await signSession(env, "library");
     await expect(verifySession(env, "library", `${cookie}x`)).resolves.toBe(
       false,
+    );
+  });
+
+  test("creates a one day session cookie by default", () => {
+    expect(createSessionCookie("session", "development")).toContain(
+      "Max-Age=86400",
+    );
+  });
+
+  test("creates a thirty day session cookie when remember login is enabled", () => {
+    expect(createSessionCookie("session", "development", true)).toContain(
+      "Max-Age=2592000",
     );
   });
 });

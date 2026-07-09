@@ -375,6 +375,24 @@ describe("handleLogin and session-gated list", () => {
     expect(response.headers.get("set-cookie")).toContain("uim_admin_session=");
   });
 
+  test("extends the session cookie when remember login is requested", async () => {
+    const response = await handleLogin({
+      request: new Request("https://app.test/api/library/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          id: "library-admin",
+          password: "library-pass",
+          remember: true,
+        }),
+      }),
+      env,
+      categoryValue: "library",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=2592000");
+  });
+
   test("lists images when the session cookie is valid", async () => {
     const repository = new FakeRepository();
     await repository.insert({

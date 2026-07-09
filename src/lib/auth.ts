@@ -2,6 +2,8 @@ import type { CloudflareEnv } from "@/types/cloudflare";
 import type { Category } from "./categories";
 
 export const SESSION_COOKIE_NAME = "uim_admin_session";
+const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+const REMEMBER_SESSION_MAX_AGE_SECONDS = DEFAULT_SESSION_MAX_AGE_SECONDS * 30;
 
 export interface AdminCredential {
   id: string;
@@ -112,11 +114,15 @@ export function readCookie(
 export function createSessionCookie(
   value: string,
   appEnv: CloudflareEnv["APP_ENV"],
+  remember = false,
 ): string {
   const secure = appEnv === "production" ? "; Secure" : "";
+  const maxAge = remember
+    ? REMEMBER_SESSION_MAX_AGE_SECONDS
+    : DEFAULT_SESSION_MAX_AGE_SECONDS;
   return `${SESSION_COOKIE_NAME}=${encodeURIComponent(
     value,
-  )}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${secure}`;
+  )}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 export function createExpiredSessionCookie(): string {

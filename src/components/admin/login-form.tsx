@@ -24,9 +24,26 @@ interface LoginFormProps {
   category: Category;
 }
 
+function readSavedAdminId(key: string): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    return window.localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export function LoginForm({ category }: LoginFormProps) {
-  const [id, setId] = useState("");
+  const savedIdStorageKey = `uim:${category}:saved-admin-id`;
+  const [id, setId] = useState(() => readSavedAdminId(savedIdStorageKey));
   const [password, setPassword] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(false);
+  const [saveId, setSaveId] = useState(() =>
+    Boolean(readSavedAdminId(savedIdStorageKey)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -40,7 +57,7 @@ export function LoginForm({ category }: LoginFormProps) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id, password }),
+      body: JSON.stringify({ id, password, remember: rememberLogin }),
     });
 
     setPending(false);
@@ -51,6 +68,16 @@ export function LoginForm({ category }: LoginFormProps) {
         | null;
       setError(body?.error ?? "로그인에 실패했습니다.");
       return;
+    }
+
+    try {
+      if (saveId && id.trim()) {
+        window.localStorage.setItem(savedIdStorageKey, id.trim());
+      } else {
+        window.localStorage.removeItem(savedIdStorageKey);
+      }
+    } catch {
+      // Storage errors should not block a successful login.
     }
 
     window.location.reload();
@@ -94,6 +121,36 @@ export function LoginForm({ category }: LoginFormProps) {
                   </FieldDescription>
                 )}
               </Field>
+              <div className="grid gap-3 rounded-md border bg-muted/20 p-3 text-sm">
+                <label
+                  htmlFor="remember-login"
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <input
+                    id="remember-login"
+                    type="checkbox"
+                    checked={rememberLogin}
+                    onChange={(event) =>
+                      setRememberLogin(event.target.checked)
+                    }
+                    className="size-4 rounded border-input accent-primary"
+                  />
+                  <span>로그인 유지</span>
+                </label>
+                <label
+                  htmlFor="save-admin-id"
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <input
+                    id="save-admin-id"
+                    type="checkbox"
+                    checked={saveId}
+                    onChange={(event) => setSaveId(event.target.checked)}
+                    className="size-4 rounded border-input accent-primary"
+                  />
+                  <span>아이디 저장</span>
+                </label>
+              </div>
               <Button type="submit" disabled={pending}>
                 <LogInIcon data-icon="inline-start" />
                 로그인
