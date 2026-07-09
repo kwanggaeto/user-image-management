@@ -84,6 +84,22 @@ npm run deploy
 
 The OpenNext Cloudflare adapter builds `.open-next/worker.js` and Wrangler serves or deploys that Worker.
 
+For Cloudflare Workers Builds with separate build and deploy commands, use:
+
+```bash
+Build command: npm run cf:build
+Deploy command: npm run cf:deploy
+```
+
+If the build command runs OpenNext directly, use:
+
+```bash
+Build command: npx @opennextjs/cloudflare build
+Deploy command: npm run cf:deploy
+```
+
+`cf:deploy` applies remote D1 migrations before publishing the Worker. Without the remote migration, authenticated admin pages can fail with `D1_ERROR: no such table: images`.
+
 ## Cleanup Worker
 
 Deploy:
