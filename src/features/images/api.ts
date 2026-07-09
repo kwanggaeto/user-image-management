@@ -141,10 +141,16 @@ function parsePartHeaders(value: string): {
   }
 
   const disposition = headers.get("content-disposition") ?? "";
+  const readDispositionValue = (key: string) => {
+    const match = new RegExp(
+      `(?:^|;\\s*)${key}=(?:"([^"]*)"|([^;\\r\\n]*))`,
+    ).exec(disposition);
+    return match?.[1] ?? match?.[2]?.trim() ?? null;
+  };
+
   return {
-    name: disposition.match(/(?:^|;\s*)name="([^"]*)"/)?.[1] ?? null,
-    filename:
-      disposition.match(/(?:^|;\s*)filename="([^"]*)"/)?.[1] ?? null,
+    name: readDispositionValue("name"),
+    filename: readDispositionValue("filename"),
     contentType: headers.get("content-type") ?? "application/octet-stream",
   };
 }

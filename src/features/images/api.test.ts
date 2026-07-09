@@ -162,6 +162,38 @@ function multipartRequestWithoutFormData(
   return request;
 }
 
+function unquotedMultipartRequestWithoutFormData(
+  url: string,
+  filename: string,
+  contentType: string,
+  content: string,
+): Request {
+  const boundary = "----uim-test-boundary";
+  const body = [
+    `--${boundary}`,
+    `Content-Type: ${contentType}`,
+    `Content-Disposition: form-data; name=file; filename=${filename}; filename*=utf-8''${filename}`,
+    "",
+    content,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+  const request = new Request(url, {
+    method: "POST",
+    headers: {
+      "x-upload-token": "upload-token",
+      "content-type": `multipart/form-data; boundary="${boundary}"`,
+    },
+    body,
+  });
+  Object.defineProperty(request, "formData", {
+    value: async () => {
+      throw new Error("formData unavailable");
+    },
+  });
+  return request;
+}
+
 describe("handleImageUpload", () => {
   test("rejects upload without token", async () => {
     const request = new Request("https://app.test/api/library/images", {
@@ -265,6 +297,31 @@ describe("handleImageUpload", () => {
     const stored = storage.objects.get("images/library/abc12345/photo.jpg");
     expect(stored?.type).toBe("image/jpeg");
     expect(stored?.size).toBe(5);
+  });
+
+  test("uploads multipart image files with unquoted disposition parameters", async () => {
+    const repository = new FakeRepository();
+    const request = unquotedMultipartRequestWithoutFormData(
+      "https://app.test/api/library/images",
+      "photo.jpg",
+      "image/jpeg",
+      "image",
+    );
+
+    const response = await handleImageUpload({
+      request,
+      env,
+      categoryValue: "library",
+      repository,
+      storage: new FakeStorage(),
+      thumbnailGenerator: new FakeThumbnailGenerator(),
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => "abc12345",
+      now: () => new Date("2026-07-09T00:00:00.000Z"),
+    });
+
+    expect(response.status).toBe(201);
+    expect(repository.rows[0]?.filename).toBe("photo.jpg");
   });
 
   test("retries uid generation when the repository reports a duplicate uid", async () => {
