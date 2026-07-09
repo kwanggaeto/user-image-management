@@ -8,15 +8,27 @@ import {
   verifySession,
 } from "@/lib/auth";
 import { parseCategory, parsePage, parsePageSize } from "@/lib/categories";
-import { createD1ImageRepository } from "@/lib/images/d1-repository";
+import {
+  createD1ImageRepository,
+  createD1UsageRepository,
+} from "@/lib/images/d1-repository";
+import { createCloudflareThumbnailGenerator } from "@/lib/images/cloudflare-thumbnail-generator";
 import { createR2ImageStorage } from "@/lib/images/r2-storage";
 import {
   createImage,
   deleteImage,
   getImage,
   listImages,
+  summarizeUsage,
 } from "@/lib/images/service";
-import type { ImageRepository, ImageStorage } from "@/lib/images/types";
+import type {
+  ImageRepository,
+  ImageStorage,
+  ThumbnailGenerator,
+  UsagePeriod,
+  UsageRepository,
+} from "@/lib/images/types";
+import { DuplicateImageUidError } from "@/lib/images/types";
 import { createUid as createRandomUid } from "@/lib/uid";
 import type { CloudflareEnv } from "@/types/cloudflare";
 
@@ -26,6 +38,8 @@ interface HandlerBase {
   categoryValue: string;
   repository?: ImageRepository;
   storage?: ImageStorage;
+  thumbnailGenerator?: ThumbnailGenerator;
+  usageRepository?: UsageRepository;
 }
 
 interface UploadHandlerInput extends HandlerBase {
@@ -49,9 +63,24 @@ function storageFor(input: HandlerBase): ImageStorage {
   return input.storage ?? createR2ImageStorage(input.env.IMAGES_BUCKET);
 }
 
+function thumbnailGeneratorFor(input: HandlerBase): ThumbnailGenerator {
+  return (
+    input.thumbnailGenerator ??
+    createCloudflareThumbnailGenerator(input.env.IMAGES)
+  );
+}
+
+function usageRepositoryFor(input: HandlerBase): UsageRepository {
+  return input.usageRepository ?? createD1UsageRepository(input.env.DB);
+}
+
 function parseExpireDays(env: CloudflareEnv): number {
   const parsed = Number(env.IMAGE_EXPIRE_DAYS);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 7;
+}
+
+function parseUsagePeriod(value: string | null): UsagePeriod {
+  return value === "month" || value === "year" ? value : "day";
 }
 
 function isUploadedFile(value: FormDataEntryValue | null): value is File {
@@ -134,18 +163,30 @@ export async function handleImageUpload(
     return error("Only image uploads are supported", 415);
   }
 
-  const image = await createImage({
-    repository: repositoryFor(input),
-    storage: storageFor(input),
-    category,
-    uid: input.createUid?.() ?? createRandomUid(),
-    filename: file.name,
-    file,
-    now: input.now?.() ?? new Date(),
-    expireDays: parseExpireDays(input.env),
-  });
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const image = await createImage({
+        repository: repositoryFor(input),
+        storage: storageFor(input),
+        thumbnailGenerator: thumbnailGeneratorFor(input),
+        usageRepository: usageRepositoryFor(input),
+        category,
+        uid: input.createUid?.() ?? createRandomUid(),
+        filename: file.name,
+        file,
+        now: input.now?.() ?? new Date(),
+        expireDays: parseExpireDays(input.env),
+      });
 
-  return json({ image }, { status: 201 });
+      return json({ image }, { status: 201 });
+    } catch (error) {
+      if (!(error instanceof DuplicateImageUidError) || attempt === 4) {
+        throw error;
+      }
+    }
+  }
+
+  return error("Unable to allocate image uid", 500);
 }
 
 export async function handleImageList(input: HandlerBase): Promise<Response> {
@@ -195,6 +236,65 @@ export async function handleImageFile(
       "Cache-Control": "private, max-age=60",
     },
   });
+}
+
+export async function handleImageThumbnail(
+  input: HandlerBase & { uid: string },
+): Promise<Response> {
+  const category = parseCategory(input.categoryValue);
+  const image = await getImage(repositoryFor(input), category, input.uid);
+  if (!image) {
+    return error("Image not found", 404);
+  }
+
+  const storage = storageFor(input);
+  const blob =
+    (image.thumbnailKey ? await storage.get(image.thumbnailKey) : null) ??
+    (await storage.get(image.key));
+  if (!blob) {
+    return error("Image file not found", 404);
+  }
+
+  return new Response(blob, {
+    headers: {
+      "Content-Type": blob.type || "application/octet-stream",
+      "Cache-Control": "private, max-age=300",
+    },
+  });
+}
+
+export async function handleImageDownload(
+  input: HandlerBase & { uid: string },
+): Promise<Response> {
+  const category = parseCategory(input.categoryValue);
+  const image = await getImage(repositoryFor(input), category, input.uid);
+  if (!image) {
+    return error("Image not found", 404);
+  }
+
+  const blob = await storageFor(input).get(image.key);
+  if (!blob) {
+    return error("Image file not found", 404);
+  }
+
+  return new Response(blob, {
+    headers: {
+      "Content-Type": blob.type || "application/octet-stream",
+      "Content-Disposition": `attachment; filename="${image.filename}"`,
+      "Cache-Control": "private, max-age=60",
+    },
+  });
+}
+
+export async function handleUsageSummary(input: HandlerBase): Promise<Response> {
+  const category = parseCategory(input.categoryValue);
+  if (!(await isAdminSession(input))) {
+    return error("Authentication required", 401);
+  }
+
+  const url = new URL(input.request.url);
+  const period = parseUsagePeriod(url.searchParams.get("period"));
+  return json(await summarizeUsage(usageRepositoryFor(input), category, period));
 }
 
 export async function handleImageDelete(

@@ -35,11 +35,6 @@ export async function createImage(input: {
     ? await input.thumbnailGenerator.generate(input.file)
     : null;
 
-  await input.storage.put(key, input.file);
-  if (thumbnail && thumbnailKey) {
-    await input.storage.put(thumbnailKey, thumbnail);
-  }
-
   const image = await input.repository.insert({
     uid: input.uid,
     category: input.category,
@@ -50,10 +45,23 @@ export async function createImage(input: {
     expireAt: timestamps.expireAt,
   });
 
-  await input.usageRepository?.insert({
-    category: input.category,
-    createdAt: timestamps.createAt,
-  });
+  try {
+    await input.storage.put(key, input.file);
+    if (thumbnail && thumbnailKey) {
+      await input.storage.put(thumbnailKey, thumbnail);
+    }
+
+    await input.usageRepository?.insert({
+      category: input.category,
+      createdAt: timestamps.createAt,
+    });
+  } catch (error) {
+    await deleteStoredImage(input.storage, image).catch(() => undefined);
+    await input.repository
+      .deleteByUid(input.category, input.uid)
+      .catch(() => undefined);
+    throw error;
+  }
 
   return image;
 }

@@ -4,18 +4,32 @@ import type {
   ImageRecord,
   ImageRepository,
   ImageStorage,
+  ThumbnailGenerator,
+  UsagePeriod,
+  UsageRepository,
+  UsageSummary,
 } from "@/lib/images/types";
+import { DuplicateImageUidError as DuplicateUidError } from "@/lib/images/types";
 import {
   handleImageDelete,
+  handleImageDownload,
   handleImageList,
+  handleImageThumbnail,
   handleImageUpload,
   handleLogin,
+  handleUsageSummary,
 } from "./api";
 
 class FakeRepository implements ImageRepository {
   rows: ImageRecord[] = [];
+  failNextInsertWithDuplicate = false;
 
   async insert(record: Omit<ImageRecord, "id">): Promise<ImageRecord> {
+    if (this.failNextInsertWithDuplicate) {
+      this.failNextInsertWithDuplicate = false;
+      throw new DuplicateUidError();
+    }
+
     const row = { ...record, id: this.rows.length + 1 };
     this.rows.push(row);
     return row;
@@ -57,6 +71,38 @@ class FakeStorage implements ImageStorage {
 
   async delete(key: string): Promise<void> {
     this.objects.delete(key);
+  }
+}
+
+class FakeThumbnailGenerator implements ThumbnailGenerator {
+  async generate(): Promise<Blob> {
+    return new Response("thumb", {
+      headers: { "Content-Type": "image/webp" },
+    }).blob();
+  }
+}
+
+class FakeUsageRepository implements UsageRepository {
+  records: Array<{ category: ImageRecord["category"]; createdAt: string }> = [];
+  summary: UsageSummary = {
+    period: "day",
+    total: 0,
+    buckets: [],
+  };
+
+  async insert(record: { category: ImageRecord["category"]; createdAt: string }) {
+    this.records.push(record);
+  }
+
+  async summarize(
+    category: ImageRecord["category"],
+    period: UsagePeriod,
+  ): Promise<UsageSummary> {
+    return {
+      ...this.summary,
+      period,
+      total: this.records.filter((record) => record.category === category).length || this.summary.total,
+    };
   }
 }
 
@@ -140,9 +186,10 @@ describe("handleImageUpload", () => {
     expect(response.status).toBe(415);
   });
 
-  test("uploads image files through API token only", async () => {
+  test("uploads image files with thumbnail generation and usage count", async () => {
     const repository = new FakeRepository();
     const storage = new FakeStorage();
+    const usageRepository = new FakeUsageRepository();
     const request = multipartRequest(
       "https://app.test/api/library/images",
       "photo.jpg",
@@ -156,14 +203,52 @@ describe("handleImageUpload", () => {
       categoryValue: "library",
       repository,
       storage,
-      createUid: () => "abc123",
+      thumbnailGenerator: new FakeThumbnailGenerator(),
+      usageRepository,
+      createUid: () => "abc12345",
       now: () => new Date("2026-07-09T00:00:00.000Z"),
     });
 
     expect(response.status).toBe(201);
     expect(repository.rows[0]?.category).toBe("library");
     expect([...storage.objects.keys()]).toEqual([
-      "images/library/abc123/photo.jpg",
+      "images/library/abc12345/photo.jpg",
+      "images/library/abc12345/thumbnail.webp",
+    ]);
+    expect(usageRepository.records).toEqual([
+      { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
+    ]);
+  });
+
+  test("retries uid generation when the repository reports a duplicate uid", async () => {
+    const repository = new FakeRepository();
+    repository.failNextInsertWithDuplicate = true;
+    const request = multipartRequest(
+      "https://app.test/api/library/images",
+      "photo.jpg",
+      "image/jpeg",
+      "image",
+    );
+    const storage = new FakeStorage();
+    const uids = ["dupe0001", "fresh001"];
+
+    const response = await handleImageUpload({
+      request,
+      env,
+      categoryValue: "library",
+      repository,
+      storage,
+      thumbnailGenerator: new FakeThumbnailGenerator(),
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => uids.shift() ?? "unused00",
+      now: () => new Date("2026-07-09T00:00:00.000Z"),
+    });
+
+    expect(response.status).toBe(201);
+    expect(repository.rows[0]?.uid).toBe("fresh001");
+    expect([...storage.objects.keys()]).toEqual([
+      "images/library/fresh001/photo.jpg",
+      "images/library/fresh001/thumbnail.webp",
     ]);
   });
 });
@@ -231,6 +316,157 @@ describe("handleLogin and session-gated list", () => {
     expect(response.status).toBe(200);
     expect(body.pageSize).toBe(20);
     expect(body.items[0].uid).toBe("abc123");
+  });
+});
+
+describe("image file utilities", () => {
+  test("serves the thumbnail blob when available", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    await repository.insert({
+      uid: "abc12345",
+      category: "library",
+      filename: "photo.jpg",
+      key: "images/library/abc12345/photo.jpg",
+      thumbnailKey: "images/library/abc12345/thumbnail.webp",
+      createAt: "2026-07-09T09:00:00.000+09:00",
+      expireAt: "2026-07-16T09:00:00.000+09:00",
+    });
+    await storage.put(
+      "images/library/abc12345/thumbnail.webp",
+      await new Response("thumb", {
+        headers: { "Content-Type": "image/webp" },
+      }).blob(),
+    );
+
+    const response = await handleImageThumbnail({
+      request: new Request("https://app.test/api/library/images/abc12345/thumbnail"),
+      env,
+      categoryValue: "library",
+      uid: "abc12345",
+      repository,
+      storage,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/webp");
+    await expect(response.text()).resolves.toBe("thumb");
+  });
+
+  test("falls back to the original file when a legacy thumbnail is missing", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    await repository.insert({
+      uid: "legacy01",
+      category: "library",
+      filename: "photo.jpg",
+      key: "images/library/legacy01/photo.jpg",
+      thumbnailKey: null,
+      createAt: "2026-07-09T09:00:00.000+09:00",
+      expireAt: "2026-07-16T09:00:00.000+09:00",
+    });
+    await storage.put(
+      "images/library/legacy01/photo.jpg",
+      await new Response("original", {
+        headers: { "Content-Type": "image/jpeg" },
+      }).blob(),
+    );
+
+    const response = await handleImageThumbnail({
+      request: new Request("https://app.test/api/library/images/legacy01/thumbnail"),
+      env,
+      categoryValue: "library",
+      uid: "legacy01",
+      repository,
+      storage,
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("original");
+  });
+
+  test("downloads the original image as an attachment", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    await repository.insert({
+      uid: "abc12345",
+      category: "library",
+      filename: "photo.jpg",
+      key: "images/library/abc12345/photo.jpg",
+      thumbnailKey: "images/library/abc12345/thumbnail.webp",
+      createAt: "2026-07-09T09:00:00.000+09:00",
+      expireAt: "2026-07-16T09:00:00.000+09:00",
+    });
+    await storage.put(
+      "images/library/abc12345/photo.jpg",
+      await new Response("image", {
+        headers: { "Content-Type": "image/jpeg" },
+      }).blob(),
+    );
+
+    const response = await handleImageDownload({
+      request: new Request("https://app.test/api/library/images/abc12345/download"),
+      env,
+      categoryValue: "library",
+      uid: "abc12345",
+      repository,
+      storage,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="photo.jpg"',
+    );
+    await expect(response.text()).resolves.toBe("image");
+  });
+});
+
+describe("handleUsageSummary", () => {
+  test("requires an admin session", async () => {
+    const response = await handleUsageSummary({
+      request: new Request("https://app.test/api/library/usage?period=day"),
+      env,
+      categoryValue: "library",
+      usageRepository: new FakeUsageRepository(),
+    });
+
+    expect(response.status).toBe(401);
+  });
+
+  test("returns usage summary for the selected period with a valid admin session", async () => {
+    const usageRepository = new FakeUsageRepository();
+    usageRepository.summary = {
+      period: "month",
+      total: 3,
+      buckets: [{ label: "2026-07", count: 3, cumulative: 3 }],
+    };
+    const login = await handleLogin({
+      request: new Request("https://app.test/api/library/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          id: "library-admin",
+          password: "library-pass",
+        }),
+      }),
+      env,
+      categoryValue: "library",
+    });
+
+    const response = await handleUsageSummary({
+      request: new Request("https://app.test/api/library/usage?period=month", {
+        headers: { cookie: login.headers.get("set-cookie") ?? "" },
+      }),
+      env,
+      categoryValue: "library",
+      usageRepository,
+    });
+    const body = (await response.json()) as UsageSummary;
+
+    expect(response.status).toBe(200);
+    expect(body.period).toBe("month");
+    expect(body.buckets).toEqual([
+      { label: "2026-07", count: 3, cumulative: 3 },
+    ]);
   });
 });
 
