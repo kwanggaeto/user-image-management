@@ -47,6 +47,12 @@ interface UploadHandlerInput extends HandlerBase {
   now?: () => Date;
 }
 
+interface UploadedImageFile {
+  name: string;
+  type: string;
+  blob: Blob;
+}
+
 function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
 }
@@ -94,6 +100,147 @@ function isUploadedFile(value: FormDataEntryValue | null): value is File {
     "arrayBuffer" in value &&
     typeof value.arrayBuffer === "function"
   );
+}
+
+function parseBoundary(contentType: string | null): string | null {
+  const match = contentType?.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  return match?.[1] ?? match?.[2]?.trim() ?? null;
+}
+
+function indexOfBytes(
+  source: Uint8Array,
+  search: Uint8Array,
+  from = 0,
+): number {
+  for (let index = from; index <= source.length - search.length; index += 1) {
+    let matched = true;
+    for (let offset = 0; offset < search.length; offset += 1) {
+      if (source[index + offset] !== search[offset]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function parsePartHeaders(value: string): {
+  name: string | null;
+  filename: string | null;
+  contentType: string;
+} {
+  const headers = new Headers();
+  for (const line of value.split("\r\n")) {
+    const separator = line.indexOf(":");
+    if (separator > -1) {
+      headers.set(line.slice(0, separator), line.slice(separator + 1).trim());
+    }
+  }
+
+  const disposition = headers.get("content-disposition") ?? "";
+  return {
+    name: disposition.match(/(?:^|;\s*)name="([^"]*)"/)?.[1] ?? null,
+    filename:
+      disposition.match(/(?:^|;\s*)filename="([^"]*)"/)?.[1] ?? null,
+    contentType: headers.get("content-type") ?? "application/octet-stream",
+  };
+}
+
+function inferImageContentType(filename: string, contentType: string): string {
+  if (contentType && contentType !== "application/octet-stream") {
+    return contentType;
+  }
+
+  const extension = filename.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") {
+    return "image/jpeg";
+  }
+  if (extension === "png") {
+    return "image/png";
+  }
+  if (extension === "webp") {
+    return "image/webp";
+  }
+  if (extension === "gif") {
+    return "image/gif";
+  }
+  return contentType;
+}
+
+async function parseMultipartUploadFile(
+  request: Request,
+): Promise<UploadedImageFile | null> {
+  const boundary = parseBoundary(request.headers.get("content-type"));
+  if (!boundary) {
+    return null;
+  }
+
+  const body = new Uint8Array(await request.arrayBuffer());
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const boundaryMarker = encoder.encode(`--${boundary}`);
+  const nextBoundaryMarker = encoder.encode(`\r\n--${boundary}`);
+  const headerSeparator = encoder.encode("\r\n\r\n");
+  let partStart = indexOfBytes(body, boundaryMarker);
+
+  while (partStart > -1) {
+    let cursor = partStart + boundaryMarker.length;
+    if (body[cursor] === 45 && body[cursor + 1] === 45) {
+      return null;
+    }
+    if (body[cursor] === 13 && body[cursor + 1] === 10) {
+      cursor += 2;
+    }
+
+    const headerEnd = indexOfBytes(body, headerSeparator, cursor);
+    if (headerEnd === -1) {
+      return null;
+    }
+
+    const contentStart = headerEnd + headerSeparator.length;
+    const contentEnd = indexOfBytes(body, nextBoundaryMarker, contentStart);
+    if (contentEnd === -1) {
+      return null;
+    }
+
+    const headers = parsePartHeaders(
+      decoder.decode(body.subarray(cursor, headerEnd)),
+    );
+    if (headers.name === "file" && headers.filename) {
+      const type = inferImageContentType(headers.filename, headers.contentType);
+      return {
+        name: headers.filename,
+        type,
+        blob: new Blob([body.slice(contentStart, contentEnd)], { type }),
+      };
+    }
+
+    partStart = contentEnd + 2;
+  }
+
+  return null;
+}
+
+async function readUploadFile(request: Request): Promise<UploadedImageFile | null> {
+  if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+    return parseMultipartUploadFile(request);
+  }
+
+  const formData = await request.formData();
+  const file = formData.get("file");
+  if (!isUploadedFile(file)) {
+    return null;
+  }
+
+  const type = inferImageContentType(file.name, file.type);
+  return {
+    name: file.name,
+    type,
+    blob: new Blob([await file.arrayBuffer()], { type }),
+  };
 }
 
 async function isAdminSession(input: HandlerBase): Promise<boolean> {
@@ -153,9 +300,8 @@ export async function handleImageUpload(
     return error("Invalid upload token", 401);
   }
 
-  const formData = await input.request.formData();
-  const file = formData.get("file");
-  if (!isUploadedFile(file)) {
+  const file = await readUploadFile(input.request);
+  if (!file) {
     return error("Image file is required", 400);
   }
 
@@ -173,7 +319,7 @@ export async function handleImageUpload(
         category,
         uid: input.createUid?.() ?? createRandomUid(),
         filename: file.name,
-        file,
+        file: file.blob,
         now: input.now?.() ?? new Date(),
         expireDays: parseExpireDays(input.env),
       });

@@ -147,6 +147,21 @@ function multipartRequest(
   });
 }
 
+function multipartRequestWithoutFormData(
+  url: string,
+  filename: string,
+  contentType: string,
+  content: string,
+): Request {
+  const request = multipartRequest(url, filename, contentType, content);
+  Object.defineProperty(request, "formData", {
+    value: async () => {
+      throw new Error("formData unavailable");
+    },
+  });
+  return request;
+}
+
 describe("handleImageUpload", () => {
   test("rejects upload without token", async () => {
     const request = new Request("https://app.test/api/library/images", {
@@ -218,6 +233,38 @@ describe("handleImageUpload", () => {
     expect(usageRepository.records).toEqual([
       { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
     ]);
+  });
+
+  test("uploads multipart image files when request formData is unavailable", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    const request = multipartRequestWithoutFormData(
+      "https://app.test/api/library/images",
+      "photo.jpg",
+      "image/jpeg",
+      "image",
+    );
+
+    const response = await handleImageUpload({
+      request,
+      env,
+      categoryValue: "library",
+      repository,
+      storage,
+      thumbnailGenerator: new FakeThumbnailGenerator(),
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => "abc12345",
+      now: () => new Date("2026-07-09T00:00:00.000Z"),
+    });
+
+    expect(response.status).toBe(201);
+    expect(repository.rows[0]).toMatchObject({
+      filename: "photo.jpg",
+      key: "images/library/abc12345/photo.jpg",
+    });
+    const stored = storage.objects.get("images/library/abc12345/photo.jpg");
+    expect(stored?.type).toBe("image/jpeg");
+    expect(stored?.size).toBe(5);
   });
 
   test("retries uid generation when the repository reports a duplicate uid", async () => {
