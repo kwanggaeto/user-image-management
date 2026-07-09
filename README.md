@@ -100,6 +100,8 @@ Deploy command: npm run cf:deploy
 
 `cf:deploy` applies remote D1 migrations before publishing the Worker. Without the remote migration, authenticated admin pages can fail with `D1_ERROR: no such table: images`.
 
+Deploy scripts use `wrangler deploy --keep-vars` so variables added in the Cloudflare Dashboard are not deleted by a Git-triggered deployment. Keep secrets such as `SESSION_SECRET`, `UPLOAD_API_TOKEN`, `LIBRARY_ADMIN_PASSWORD`, and `NAKDONG_ADMIN_PASSWORD` in Dashboard secrets or `wrangler secret put`; do not add them to `wrangler.jsonc`.
+
 ## Cleanup Worker
 
 Deploy:
