@@ -48,6 +48,15 @@ describe("LoginForm", () => {
     expect(body).toMatchObject({ id: "admin", password: "pass", remember: true });
   });
 
+  test("arranges login option toggles horizontally", () => {
+    render(<LoginForm category="library" />);
+
+    const options = screen.getByLabelText("로그인 유지").closest("div");
+
+    expect(options).toHaveClass("flex-row");
+    expect(options).not.toHaveClass("flex-col");
+  });
+
   test("loads and stores the category scoped saved id", async () => {
     window.localStorage.setItem("uim:library:saved-admin-id", "saved-admin");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
