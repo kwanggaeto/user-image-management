@@ -18,7 +18,7 @@ describe("ImageList", () => {
               thumbnailKey: null,
               createAt: "2026-07-09T09:00:00.000+09:00",
               expireAt: "2026-07-16T09:00:00.000+09:00",
-              thumbnailUrl: "/api/library/images/abc123/file",
+              thumbnailUrl: "/api/library/images/abc123/thumbnail",
             },
           ],
           page: 1,
@@ -33,9 +33,13 @@ describe("ImageList", () => {
     expect(screen.getByText("2026-07-09T09:00:00.000+09:00")).toBeInTheDocument();
     expect(screen.getByText("2026-07-16T09:00:00.000+09:00")).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "이용 기록" })).toHaveAttribute(
+      "href",
+      "/library/admin/usage",
+    );
     expect(screen.getByRole("img", { name: "photo.jpg" })).toHaveAttribute(
       "src",
-      "/api/library/images/abc123/file",
+      "/api/library/images/abc123/thumbnail",
     );
   });
 

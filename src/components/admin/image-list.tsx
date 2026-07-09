@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
-import { ExternalLinkIcon, Trash2Icon } from "lucide-react";
+import { BarChart3Icon, ExternalLinkIcon, Trash2Icon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +94,12 @@ export function ImageList({ category, initialData }: ImageListProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <a href={`/${category}/admin/usage`}>
+                <BarChart3Icon data-icon="inline-start" />
+                이용 기록
+              </a>
+            </Button>
             <Select
               value={String(data.pageSize)}
               onValueChange={(value) => loadPage(1, Number(value))}
