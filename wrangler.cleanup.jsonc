@@ -11,6 +11,7 @@
     "APP_ENV": "production",
     "IMAGE_EXPIRE_DAYS": "7"
   },
+  "keep_vars": true,
   "d1_databases": [
     {
       "binding": "DB",
