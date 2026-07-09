@@ -64,4 +64,38 @@ describe("createD1ImageRepository", () => {
     expect(result.items[0]?.uid).toBe("abc123");
     expect(listStatement.bind).toHaveBeenCalledWith("library", 10, 0);
   });
+
+  test("creates schema and retries when the images table is missing", async () => {
+    const missingTableStatement = {
+      bind: vi.fn().mockReturnThis(),
+      all: vi
+        .fn()
+        .mockRejectedValue(new Error("D1_ERROR: no such table: images: SQLITE_ERROR")),
+    };
+    const schemaStatement = createStatement({ meta: {} });
+    const listStatement = createStatement({ results: [] });
+    const countStatement = createStatement({ total: 0 });
+    let listAttempts = 0;
+    const db = {
+      prepare: vi.fn((sql: string) => {
+        if (sql.includes("SELECT id, uid, category, filename, key, createAt, expireAt")) {
+          listAttempts += 1;
+          return listAttempts === 1 ? missingTableStatement : listStatement;
+        }
+        if (sql.includes("SELECT COUNT(*) AS total")) {
+          return countStatement;
+        }
+        if (sql.includes("CREATE TABLE") || (sql.includes("CREATE") && sql.includes("INDEX"))) {
+          return schemaStatement;
+        }
+        throw new Error(`Unexpected SQL: ${sql}`);
+      }),
+    } as unknown as D1Database;
+
+    const result = await createD1ImageRepository(db).list("library", 1, 10);
+
+    expect(result).toEqual({ items: [], total: 0 });
+    expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining("CREATE TABLE IF NOT EXISTS images"));
+    expect(listAttempts).toBe(2);
+  });
 });
