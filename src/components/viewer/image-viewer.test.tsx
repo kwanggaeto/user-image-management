@@ -65,11 +65,9 @@ describe("ImageViewer", () => {
       "/api/nakdong/images/nak12345/file",
     );
     expect(image).toHaveClass("block", "h-auto", "w-full");
-    expect(image).not.toHaveClass(
-      "max-h-[78dvh]",
-      "rounded-md",
-      "object-contain",
-    );
+    expect(image).not.toHaveClass("max-h-[78dvh]");
+    expect(image).not.toHaveClass("rounded-md");
+    expect(image).not.toHaveClass("object-contain");
     expect(main).toHaveClass("w-full");
     expect(main.children).toHaveLength(1);
     expect(main.firstElementChild).toBe(image);
