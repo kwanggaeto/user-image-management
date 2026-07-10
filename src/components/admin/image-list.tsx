@@ -3,7 +3,12 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
-import { BarChart3Icon, ExternalLinkIcon, Trash2Icon } from "lucide-react";
+import {
+  BarChart3Icon,
+  ExternalLinkIcon,
+  LogOutIcon,
+  Trash2Icon,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +56,8 @@ interface ImageListProps {
 export function ImageList({ category, initialData }: ImageListProps) {
   const [data, setData] = useState(initialData);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const canGoPrev = data.page > 1;
   const canGoNext = data.page < data.totalPages;
 
@@ -80,6 +87,27 @@ export function ImageList({ category, initialData }: ImageListProps) {
     }
   }
 
+  async function logout() {
+    setLoggingOut(true);
+    setLogoutError(null);
+
+    try {
+      const response = await fetch(`/api/${category}/auth/logout`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Show the same message as non-OK responses.
+    }
+
+    setLoggingOut(false);
+    setLogoutError("로그아웃에 실패했습니다.");
+  }
+
   return (
     <main className="min-h-dvh bg-background px-4 py-6 text-foreground md:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
@@ -93,28 +121,44 @@ export function ImageList({ category, initialData }: ImageListProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <a href={`/${category}/admin/usage`}>
-                <BarChart3Icon data-icon="inline-start" />
-                이용 기록
-              </a>
-            </Button>
-            <Select
-              value={String(data.pageSize)}
-              onValueChange={(value) => loadPage(1, Number(value))}
-            >
-              <SelectTrigger aria-label="페이지 크기" className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="10">10개</SelectItem>
-                  <SelectItem value="20">20개</SelectItem>
-                  <SelectItem value="30">30개</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <a href={`/${category}/admin/usage`}>
+                  <BarChart3Icon data-icon="inline-start" />
+                  이용 기록
+                </a>
+              </Button>
+              <Select
+                value={String(data.pageSize)}
+                onValueChange={(value) => loadPage(1, Number(value))}
+              >
+                <SelectTrigger aria-label="페이지 크기" className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="10">10개</SelectItem>
+                    <SelectItem value="20">20개</SelectItem>
+                    <SelectItem value="30">30개</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                disabled={loggingOut}
+              >
+                <LogOutIcon data-icon="inline-start" />
+                로그아웃
+              </Button>
+            </div>
+            {logoutError ? (
+              <p className="text-sm text-destructive" role="alert">
+                {logoutError}
+              </p>
+            ) : null}
           </div>
         </header>
 

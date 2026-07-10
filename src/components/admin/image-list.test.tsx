@@ -1,8 +1,21 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ImageList } from "./image-list";
 
+function stubReload() {
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: { assign: vi.fn(), reload: vi.fn() },
+  });
+}
+
 describe("ImageList", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    stubReload();
+  });
+
   test("renders thumbnails uid times and page size control", () => {
     render(
       <ImageList
@@ -58,5 +71,30 @@ describe("ImageList", () => {
     );
 
     expect(screen.getByText("등록된 이미지가 없습니다.")).toBeInTheDocument();
+  });
+
+  test("logs out through the category scoped endpoint and reloads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ImageList
+        category="library"
+        initialData={{
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          totalPages: 1,
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "로그아웃" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/library/auth/logout", {
+      method: "POST",
+    });
+    expect(window.location.reload).toHaveBeenCalled();
   });
 });
