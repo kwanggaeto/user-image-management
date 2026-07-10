@@ -9,6 +9,18 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ image }: ImageViewerProps) {
+  if (image.category === "nakdong") {
+    return (
+      <main className="w-full">
+        <img
+          src={`/api/${image.category}/images/${image.uid}/file`}
+          alt={image.filename}
+          className="block h-auto w-full"
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-4 py-6">
