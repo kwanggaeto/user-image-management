@@ -334,7 +334,12 @@ export async function handleImageUpload(
         expireDays: parseExpireDays(input.env),
       });
 
-      return json({ image }, { status: 201 });
+      const viewUrl = new URL(
+        `/${category}/${image.uid}`,
+        input.request.url,
+      ).toString();
+
+      return json({ image, viewUrl }, { status: 201 });
     } catch (error) {
       if (!(error instanceof DuplicateImageUidError) || attempt === 4) {
         throw error;

@@ -257,6 +257,10 @@ describe("handleImageUpload", () => {
     });
 
     expect(response.status).toBe(201);
+    const body = (await response.json()) as { viewUrl: string };
+    expect(body.viewUrl).toBe(
+      "https://app.test/library/abc12345",
+    );
     expect(repository.rows[0]?.category).toBe("library");
     expect([...storage.objects.keys()]).toEqual([
       "images/library/abc12345/photo.jpg",
