@@ -20,6 +20,7 @@ describe("ImageViewer", () => {
     );
 
     const image = screen.getByAltText("photo.jpg");
+    const main = screen.getByRole("main");
 
     expect(image).toHaveAttribute(
       "src",
@@ -31,6 +32,12 @@ describe("ImageViewer", () => {
       "rounded-md",
       "object-contain",
     );
+    expect(main).toHaveClass(
+      "min-h-dvh",
+      "bg-background",
+      "text-foreground",
+    );
+    expect(main).not.toHaveClass("bg-black");
     expect(screen.getByText("abc12345")).toBeInTheDocument();
     expect(
       screen.getByText("2026-07-09T09:00:00.000+09:00"),
@@ -41,7 +48,7 @@ describe("ImageViewer", () => {
     );
   });
 
-  test("renders only an edge-to-edge natural-height image for nakdong", () => {
+  test("renders the nakdong image on a viewport-filling black background", () => {
     render(
       <ImageViewer
         image={{
@@ -68,7 +75,7 @@ describe("ImageViewer", () => {
     expect(image).not.toHaveClass("max-h-[78dvh]");
     expect(image).not.toHaveClass("rounded-md");
     expect(image).not.toHaveClass("object-contain");
-    expect(main).toHaveClass("w-full");
+    expect(main).toHaveClass("min-h-dvh", "w-full", "bg-black");
     expect(main.children).toHaveLength(1);
     expect(main.firstElementChild).toBe(image);
     expect(screen.queryByText("nak12345")).not.toBeInTheDocument();

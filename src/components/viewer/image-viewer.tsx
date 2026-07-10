@@ -11,7 +11,7 @@ interface ImageViewerProps {
 export function ImageViewer({ image }: ImageViewerProps) {
   if (image.category === "nakdong") {
     return (
-      <main className="w-full">
+      <main className="min-h-dvh w-full bg-black">
         <img
           src={`/api/${image.category}/images/${image.uid}/file`}
           alt={image.filename}
