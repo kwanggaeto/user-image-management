@@ -134,6 +134,11 @@ describe("createD1ImageRepository", () => {
 
     expect(result).toEqual({ items: [], total: 0 });
     expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining("CREATE TABLE IF NOT EXISTS images"));
+    expect(db.prepare).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "CHECK (category IN ('library', 'nakdong', 'music', 'school'))",
+      ),
+    );
     expect(listAttempts).toBe(2);
   });
 

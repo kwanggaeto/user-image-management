@@ -13,7 +13,7 @@ const IMAGE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uid TEXT NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('library', 'nakdong')),
+    category TEXT NOT NULL CHECK (category IN ('library', 'nakdong', 'music', 'school')),
     filename TEXT NOT NULL,
     key TEXT NOT NULL,
     thumbnailKey TEXT,
@@ -31,7 +31,7 @@ const IMAGE_SCHEMA_STATEMENTS = [
 const USAGE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS usage_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    category TEXT NOT NULL CHECK (category IN ('library', 'nakdong')),
+    category TEXT NOT NULL CHECK (category IN ('library', 'nakdong', 'music', 'school')),
     createdAt TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS usage_records_category_createdAt_idx
