@@ -1,6 +1,6 @@
 # 고객 업로드 이미지 관리 서버
 
-Next.js 16, Cloudflare Workers, D1, R2 기반 이미지 관리 서버입니다. `library`, `nakdong` 두 채널을 같은 D1/R2 리소스에서 category로 분리합니다.
+Next.js 16, Cloudflare Workers, D1, R2 기반 이미지 관리 서버입니다. `library`, `nakdong`, `music`, `school` 네 채널을 같은 D1/R2 리소스에서 category로 분리합니다.
 
 ## Requirements
 
@@ -28,9 +28,13 @@ LIBRARY_ADMIN_ID=library-admin
 LIBRARY_ADMIN_PASSWORD=library-pass
 NAKDONG_ADMIN_ID=nakdong-admin
 NAKDONG_ADMIN_PASSWORD=nakdong-pass
+DAEGU_ADMIN_ID=daegu-admin
+DAEGU_ADMIN_PASSWORD=daegu-pass
 ```
 
 Cloudflare production에서는 `wrangler secret put` 또는 Dashboard secrets로 `SESSION_SECRET`, `UPLOAD_API_TOKEN`, 관리자 계정 값을 설정합니다.
+
+`music`과 `school`은 `DAEGU_ADMIN_ID`, `DAEGU_ADMIN_PASSWORD`를 공유하지만 관리자 세션은 카테고리별로 분리됩니다.
 
 ## Cloudflare Resources
 
@@ -65,6 +69,10 @@ Local app:
 
 - `http://127.0.0.1:3000/library/admin`
 - `http://127.0.0.1:3000/nakdong/admin`
+- `http://127.0.0.1:3000/music/admin`
+- `http://127.0.0.1:3000/school/admin`
+
+카테고리 없이 루트 `http://127.0.0.1:3000/`에 접속하면 404 페이지를 반환합니다.
 
 ## Tests
 
@@ -100,7 +108,7 @@ Deploy command: npm run cf:deploy
 
 `cf:deploy` applies remote D1 migrations before publishing the Worker. Without the remote migration, authenticated admin pages can fail with `D1_ERROR: no such table: images`.
 
-Deploy scripts use `wrangler deploy --keep-vars` so variables added in the Cloudflare Dashboard are not deleted by a Git-triggered deployment. Keep secrets such as `SESSION_SECRET`, `UPLOAD_API_TOKEN`, `LIBRARY_ADMIN_PASSWORD`, and `NAKDONG_ADMIN_PASSWORD` in Dashboard secrets or `wrangler secret put`; do not add them to `wrangler.jsonc`.
+Deploy scripts use `wrangler deploy --keep-vars` so variables added in the Cloudflare Dashboard are not deleted by a Git-triggered deployment. Keep secrets such as `SESSION_SECRET`, `UPLOAD_API_TOKEN`, `LIBRARY_ADMIN_PASSWORD`, `NAKDONG_ADMIN_PASSWORD`, and `DAEGU_ADMIN_PASSWORD` in Dashboard secrets or `wrangler secret put`; do not add them to `wrangler.jsonc`.
 
 ## Cleanup Worker
 
@@ -124,6 +132,18 @@ curl "http://localhost:8787/__scheduled"
 
 The cron expression in `wrangler.cleanup.jsonc` is `0 16 * * *`, which runs at 01:00 KST on the following calendar day because Cloudflare Cron uses UTC.
 
+## MBTI API
+
+`GET /mbti/[type]`은 인증 없이 입력된 경로 파라미터를 그대로 JSON으로 반환합니다.
+
+```bash
+curl "http://127.0.0.1:3000/mbti/INTJ"
+```
+
+```json
+{ "type": "INTJ" }
+```
+
 ## Upload API
 
 ```bash
@@ -132,4 +152,4 @@ curl -X POST "http://127.0.0.1:3000/api/library/images" \
   -F "file=@./photo.jpg"
 ```
 
-Supported categories are `library` and `nakdong`.
+Supported categories are `library`, `nakdong`, `music`, and `school`.
