@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   BarChart3Icon,
   ExternalLinkIcon,
@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Category } from "@/lib/categories";
+import { CATEGORY_LABELS, type Category } from "@/lib/categories";
 import type { PaginatedImages } from "@/lib/images/types";
 
 interface ImageListProps {
@@ -61,10 +61,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
   const canGoPrev = data.page > 1;
   const canGoNext = data.page < data.totalPages;
 
-  const title = useMemo(
-    () => (category === "library" ? "국립중앙도서관" : "낙동강 개와 고양이 특별전"),
-    [category],
-  );
+  const title = CATEGORY_LABELS[category];
 
   async function loadPage(page: number, pageSize = data.pageSize) {
     const response = await fetch(

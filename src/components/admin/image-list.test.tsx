@@ -73,6 +73,26 @@ describe("ImageList", () => {
     expect(screen.getByText("등록된 이미지가 없습니다.")).toBeInTheDocument();
   });
 
+  test.each([
+    ["music", "음악"],
+    ["school", "학교"],
+  ] as const)("renders the %s category heading", (category, heading) => {
+    render(
+      <ImageList
+        category={category}
+        initialData={{
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          totalPages: 1,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(heading)).toBeInTheDocument();
+  });
+
   test("logs out through the category scoped endpoint and reloads", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);

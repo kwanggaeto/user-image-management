@@ -1,14 +1,16 @@
-export const CATEGORIES = ["library", "nakdong"] as const;
+export const CATEGORIES = ["library", "nakdong", "music", "school"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   library: "국립중앙도서관",
-  nakdong: "낙동강",
+  nakdong: "낙동강 개와 고양이 특별전",
+  music: "음악",
+  school: "학교",
 };
 
 export function parseCategory(value: string): Category {
-  if (value === "library" || value === "nakdong") {
+  if (isCategory(value)) {
     return value;
   }
 
@@ -16,7 +18,7 @@ export function parseCategory(value: string): Category {
 }
 
 export function isCategory(value: string): value is Category {
-  return value === "library" || value === "nakdong";
+  return CATEGORIES.includes(value as Category);
 }
 
 export function parsePage(value: string | null): number {

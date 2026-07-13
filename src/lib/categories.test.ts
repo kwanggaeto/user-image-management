@@ -7,18 +7,22 @@ import {
 } from "./categories";
 
 describe("parseCategory", () => {
-  test("accepts library and nakdong", () => {
+  test("accepts every supported category", () => {
     expect(parseCategory("library")).toBe("library");
     expect(parseCategory("nakdong")).toBe("nakdong");
+    expect(parseCategory("music")).toBe("music");
+    expect(parseCategory("school")).toBe("school");
   });
 
   test("rejects unknown category values", () => {
     expect(() => parseCategory("museum")).toThrow("Invalid category");
   });
 
-  test("exposes Korean labels for admin UI headings", () => {
+  test("exposes admin UI headings for every category", () => {
     expect(CATEGORY_LABELS.library).toBe("국립중앙도서관");
-    expect(CATEGORY_LABELS.nakdong).toBe("낙동강");
+    expect(CATEGORY_LABELS.nakdong).toBe("낙동강 개와 고양이 특별전");
+    expect(CATEGORY_LABELS.music).toBe("음악");
+    expect(CATEGORY_LABELS.school).toBe("학교");
   });
 });
 

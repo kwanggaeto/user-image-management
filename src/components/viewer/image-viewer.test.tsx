@@ -86,4 +86,33 @@ describe("ImageViewer", () => {
       screen.queryByRole("link", { name: "원본 다운로드" }),
     ).not.toBeInTheDocument();
   });
+
+  test.each(["music", "school"] as const)(
+    "uses the standard viewer for %s images",
+    (category) => {
+      render(
+        <ImageViewer
+          image={{
+            id: 3,
+            uid: `${category}01`,
+            category,
+            filename: `${category}.jpg`,
+            key: `images/${category}/${category}01/${category}.jpg`,
+            thumbnailKey: null,
+            createAt: "2026-07-13T09:00:00.000+09:00",
+            expireAt: "2026-07-20T09:00:00.000+09:00",
+          }}
+        />,
+      );
+
+      expect(screen.getByRole("main")).toHaveClass("bg-background");
+      expect(screen.getByRole("main")).not.toHaveClass("bg-black");
+      expect(
+        screen.getByRole("link", { name: "원본 다운로드" }),
+      ).toHaveAttribute(
+        "href",
+        `/api/${category}/images/${category}01/download`,
+      );
+    },
+  );
 });
