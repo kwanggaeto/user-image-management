@@ -64,6 +64,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
   const canGoNext = data.page < data.totalPages;
 
   const title = CATEGORY_LABELS[category];
+  const assetLabel = category === "music" ? "오디오" : "이미지";
 
   async function loadPage(page: number, pageSize = data.pageSize) {
     const response = await fetch(
@@ -114,9 +115,9 @@ export function ImageList({ category, initialData }: ImageListProps) {
           <div className="flex flex-col gap-2">
             <Badge variant="secondary">{title}</Badge>
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-semibold">업로드 이미지</h1>
+              <h1 className="text-2xl font-semibold">업로드 {assetLabel}</h1>
               <p className="text-sm text-muted-foreground">
-                총 {data.total}개 이미지
+                총 {data.total}개 {assetLabel}
               </p>
             </div>
           </div>
@@ -164,7 +165,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
         {data.items.length === 0 ? (
           <Empty className="min-h-[320px] border">
             <EmptyHeader>
-              <EmptyTitle>등록된 이미지가 없습니다.</EmptyTitle>
+              <EmptyTitle>등록된 {assetLabel}가 없습니다.</EmptyTitle>
               <EmptyDescription>
                 API 업로드가 완료되면 이 목록에 표시됩니다.
               </EmptyDescription>
@@ -248,7 +249,9 @@ export function ImageList({ category, initialData }: ImageListProps) {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>이미지를 삭제할까요?</AlertDialogTitle>
+                            <AlertDialogTitle>
+                              {assetLabel}를 삭제할까요?
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
                               삭제하면 R2 파일과 D1 메타데이터가 함께 제거됩니다.
                             </AlertDialogDescription>

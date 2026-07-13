@@ -162,4 +162,3 @@ git commit -m "fix: use audio wording in music admin"
 ```
 
 Expected: only the two approved admin files are changed before the commit, and the worktree is clean after it.
-

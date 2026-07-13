@@ -16,7 +16,7 @@ describe("ImageList", () => {
     stubReload();
   });
 
-  test("renders thumbnails uid times and page size control", () => {
+  test("renders thumbnails uid times and page size control", async () => {
     render(
       <ImageList
         category="library"
@@ -42,6 +42,10 @@ describe("ImageList", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("heading", { name: "업로드 이미지" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("총 1개 이미지")).toBeInTheDocument();
     expect(screen.getByText("abc123")).toBeInTheDocument();
     expect(screen.getByText("2026-07-09T09:00:00.000+09:00")).toBeInTheDocument();
     expect(screen.getByText("2026-07-16T09:00:00.000+09:00")).toBeInTheDocument();
@@ -54,6 +58,13 @@ describe("ImageList", () => {
       "src",
       "/api/library/images/abc123/thumbnail",
     );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "abc123 삭제" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "이미지를 삭제할까요?" }),
+    ).toBeInTheDocument();
   });
 
   test("renders an empty state when there are no images", () => {
@@ -71,6 +82,30 @@ describe("ImageList", () => {
     );
 
     expect(screen.getByText("등록된 이미지가 없습니다.")).toBeInTheDocument();
+  });
+
+  test("renders audio wording for an empty music list", () => {
+    render(
+      <ImageList
+        category="music"
+        initialData={{
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          totalPages: 1,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "업로드 오디오" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("총 0개 오디오")).toBeInTheDocument();
+    expect(screen.getByText("등록된 오디오가 없습니다.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("등록된 이미지가 없습니다."),
+    ).not.toBeInTheDocument();
   });
 
   test.each([
@@ -130,6 +165,10 @@ describe("ImageList", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("heading", { name: "업로드 오디오" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("총 2개 오디오")).toBeInTheDocument();
     const listenButtons = screen.getAllByRole("button", { name: "듣기" });
     expect(
       screen.getByRole("columnheader", { name: "듣기" }),
@@ -158,6 +197,13 @@ describe("ImageList", () => {
 
     await userEvent.click(listenButtons[1]);
     expect(screen.queryByLabelText("second.wav 재생")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "music01 삭제" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "오디오를 삭제할까요?" }),
+    ).toBeInTheDocument();
   });
 
   test("logs out through the category scoped endpoint and reloads", async () => {
