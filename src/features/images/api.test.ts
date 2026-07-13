@@ -13,6 +13,7 @@ import { DuplicateImageUidError as DuplicateUidError } from "@/lib/images/types"
 import {
   handleImageDelete,
   handleImageDownload,
+  handleImageFile,
   handleImageList,
   handleImageThumbnail,
   handleImageUpload,
@@ -75,7 +76,10 @@ class FakeStorage implements ImageStorage {
 }
 
 class FakeThumbnailGenerator implements ThumbnailGenerator {
+  calls = 0;
+
   async generate(): Promise<Blob> {
+    this.calls += 1;
     return new Response("thumb", {
       headers: { "Content-Type": "image/webp" },
     }).blob();
@@ -272,6 +276,130 @@ describe("handleImageUpload", () => {
       { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
     ]);
   });
+
+  test.each([
+    ["track.mp3", "audio/mpeg", "audio/mpeg"],
+    ["track.wav", "audio/wav", "audio/wav"],
+    ["track.wav", "audio/x-wav", "audio/x-wav"],
+  ] as const)(
+    "uploads %s music without creating a thumbnail",
+    async (filename, requestType, storedType) => {
+      const repository = new FakeRepository();
+      const storage = new FakeStorage();
+      const usageRepository = new FakeUsageRepository();
+      const thumbnailGenerator = new FakeThumbnailGenerator();
+
+      const response = await handleImageUpload({
+        request: multipartRequest(
+          "https://app.test/api/music/images",
+          filename,
+          requestType,
+          "audio",
+        ),
+        env,
+        categoryValue: "music",
+        repository,
+        storage,
+        thumbnailGenerator,
+        usageRepository,
+        createUid: () => "music001",
+        now: () => new Date("2026-07-13T00:00:00.000Z"),
+      });
+
+      expect(response.status).toBe(201);
+      expect(repository.rows[0]).toMatchObject({
+        uid: "music001",
+        category: "music",
+        filename,
+        key: `images/music/music001/${filename}`,
+        thumbnailKey: null,
+      });
+      expect([...storage.objects.keys()]).toEqual([
+        `images/music/music001/${filename}`,
+      ]);
+      expect(
+        storage.objects.get(`images/music/music001/${filename}`)?.type,
+      ).toBe(storedType);
+      expect(thumbnailGenerator.calls).toBe(0);
+      expect(usageRepository.records).toEqual([
+        { category: "music", createdAt: "2026-07-13T09:00:00.000+09:00" },
+      ]);
+    },
+  );
+
+  test.each([
+    ["track.mp3", "application/octet-stream", "audio/mpeg"],
+    ["track.wav", "application/octet-stream", "audio/wav"],
+    ["track.mp3", "", "audio/mpeg"],
+    ["track.wav", "", "audio/wav"],
+  ] as const)(
+    "infers %s MIME from the extension when multipart uses %s",
+    async (filename, requestType, expectedType) => {
+      const repository = new FakeRepository();
+      const storage = new FakeStorage();
+
+      const response = await handleImageUpload({
+        request: multipartRequest(
+          "https://app.test/api/music/images",
+          filename,
+          requestType,
+          "audio",
+        ),
+        env,
+        categoryValue: "music",
+        repository,
+        storage,
+        thumbnailGenerator: new FakeThumbnailGenerator(),
+        usageRepository: new FakeUsageRepository(),
+        createUid: () => "music002",
+        now: () => new Date("2026-07-13T00:00:00.000Z"),
+      });
+
+      expect(response.status).toBe(201);
+      expect(
+        storage.objects.get(`images/music/music002/${filename}`)?.type,
+      ).toBe(expectedType);
+    },
+  );
+
+  test.each([
+    ["cover.jpg", "image/jpeg"],
+    ["track.ogg", "audio/ogg"],
+    ["track.mp3", "audio/wav"],
+    ["track.wav", "audio/mpeg"],
+  ] as const)(
+    "rejects unsupported music upload %s with %s",
+    async (filename, contentType) => {
+      const repository = new FakeRepository();
+      const storage = new FakeStorage();
+      const thumbnailGenerator = new FakeThumbnailGenerator();
+
+      const response = await handleImageUpload({
+        request: multipartRequest(
+          "https://app.test/api/music/images",
+          filename,
+          contentType,
+          "content",
+        ),
+        env,
+        categoryValue: "music",
+        repository,
+        storage,
+        thumbnailGenerator,
+        usageRepository: new FakeUsageRepository(),
+        createUid: () => "music003",
+        now: () => new Date("2026-07-13T00:00:00.000Z"),
+      });
+
+      expect(response.status).toBe(415);
+      await expect(response.json()).resolves.toEqual({
+        error: "Only MP3 and WAV uploads are supported",
+      });
+      expect(repository.rows).toEqual([]);
+      expect(storage.objects.size).toBe(0);
+      expect(thumbnailGenerator.calls).toBe(0);
+    },
+  );
 
   test("uploads multipart image files when request formData is unavailable", async () => {
     const repository = new FakeRepository();
@@ -489,6 +617,53 @@ describe("handleLogin and session-gated list", () => {
 });
 
 describe("image file utilities", () => {
+  test("streams and downloads the original music file", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    await repository.insert({
+      uid: "music004",
+      category: "music",
+      filename: "track.mp3",
+      key: "images/music/music004/track.mp3",
+      thumbnailKey: null,
+      createAt: "2026-07-13T09:00:00.000+09:00",
+      expireAt: "2026-07-20T09:00:00.000+09:00",
+    });
+    await storage.put(
+      "images/music/music004/track.mp3",
+      new Blob(["audio"], { type: "audio/mpeg" }),
+    );
+
+    const fileResponse = await handleImageFile({
+      request: new Request("https://app.test/api/music/images/music004/file"),
+      env,
+      categoryValue: "music",
+      uid: "music004",
+      repository,
+      storage,
+    });
+    const downloadResponse = await handleImageDownload({
+      request: new Request(
+        "https://app.test/api/music/images/music004/download",
+      ),
+      env,
+      categoryValue: "music",
+      uid: "music004",
+      repository,
+      storage,
+    });
+
+    expect(fileResponse.status).toBe(200);
+    expect(fileResponse.headers.get("content-type")).toContain("audio/mpeg");
+    expect(downloadResponse.status).toBe(200);
+    expect(downloadResponse.headers.get("content-type")).toContain(
+      "audio/mpeg",
+    );
+    expect(downloadResponse.headers.get("content-disposition")).toBe(
+      'attachment; filename="track.mp3"',
+    );
+  });
+
   test("serves the thumbnail blob when available", async () => {
     const repository = new FakeRepository();
     const storage = new FakeStorage();

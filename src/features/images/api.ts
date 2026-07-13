@@ -155,25 +155,44 @@ function parsePartHeaders(value: string): {
   };
 }
 
-function inferImageContentType(filename: string, contentType: string): string {
+function fileExtension(filename: string): string {
+  const dot = filename.lastIndexOf(".");
+  return dot > -1 ? filename.slice(dot).toLowerCase() : "";
+}
+
+function inferUploadContentType(filename: string, contentType: string): string {
   if (contentType && contentType !== "application/octet-stream") {
     return contentType;
   }
 
-  const extension = filename.toLowerCase().split(".").pop();
-  if (extension === "jpg" || extension === "jpeg") {
-    return "image/jpeg";
+  switch (fileExtension(filename)) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".mp3":
+      return "audio/mpeg";
+    case ".wav":
+      return "audio/wav";
+    default:
+      return contentType;
   }
-  if (extension === "png") {
-    return "image/png";
+}
+
+function isSupportedMusicFile(file: UploadedImageFile): boolean {
+  const extension = fileExtension(file.name);
+  if (extension === ".mp3") {
+    return file.type === "audio/mpeg";
   }
-  if (extension === "webp") {
-    return "image/webp";
+  if (extension === ".wav") {
+    return file.type === "audio/wav" || file.type === "audio/x-wav";
   }
-  if (extension === "gif") {
-    return "image/gif";
-  }
-  return contentType;
+  return false;
 }
 
 async function parseMultipartUploadFile(
@@ -216,7 +235,7 @@ async function parseMultipartUploadFile(
       decoder.decode(body.subarray(cursor, headerEnd)),
     );
     if (headers.name === "file" && headers.filename) {
-      const type = inferImageContentType(headers.filename, headers.contentType);
+      const type = inferUploadContentType(headers.filename, headers.contentType);
       return {
         name: headers.filename,
         type,
@@ -241,7 +260,7 @@ async function readUploadFile(request: Request): Promise<UploadedImageFile | nul
     return null;
   }
 
-  const type = inferImageContentType(file.name, file.type);
+  const type = inferUploadContentType(file.name, file.type);
   return {
     name: file.name,
     type,
@@ -315,7 +334,11 @@ export async function handleImageUpload(
     return error("Image file is required", 400);
   }
 
-  if (!file.type.startsWith("image/")) {
+  if (category === "music") {
+    if (!isSupportedMusicFile(file)) {
+      return error("Only MP3 and WAV uploads are supported", 415);
+    }
+  } else if (!file.type.startsWith("image/")) {
     return error("Only image uploads are supported", 415);
   }
 
@@ -324,7 +347,8 @@ export async function handleImageUpload(
       const image = await createImage({
         repository: repositoryFor(input),
         storage: storageFor(input),
-        thumbnailGenerator: thumbnailGeneratorFor(input),
+        thumbnailGenerator:
+          category === "music" ? undefined : thumbnailGeneratorFor(input),
         usageRepository: usageRepositoryFor(input),
         category,
         uid: input.createUid?.() ?? createRandomUid(),
