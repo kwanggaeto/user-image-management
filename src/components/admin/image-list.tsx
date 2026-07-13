@@ -7,6 +7,7 @@ import {
   BarChart3Icon,
   ExternalLinkIcon,
   LogOutIcon,
+  PlayIcon,
   Trash2Icon,
 } from "lucide-react";
 import {
@@ -56,6 +57,7 @@ interface ImageListProps {
 export function ImageList({ category, initialData }: ImageListProps) {
   const [data, setData] = useState(initialData);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
+  const [playingUid, setPlayingUid] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const canGoPrev = data.page > 1;
@@ -174,7 +176,9 @@ export function ImageList({ category, initialData }: ImageListProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>썸네일</TableHead>
+                  <TableHead>
+                    {category === "music" ? "듣기" : "썸네일"}
+                  </TableHead>
                   <TableHead>UID</TableHead>
                   <TableHead>생성시간</TableHead>
                   <TableHead>만료시간</TableHead>
@@ -185,19 +189,46 @@ export function ImageList({ category, initialData }: ImageListProps) {
                 {data.items.map((image) => (
                   <TableRow key={image.uid}>
                     <TableCell>
-                      <a
-                        href={`/${category}/${image.uid}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-3"
-                      >
-                        <img
-                          src={image.thumbnailUrl}
-                          alt={image.filename}
-                          className="size-16 rounded-md border object-cover"
-                        />
-                        <ExternalLinkIcon data-icon="inline-end" />
-                      </a>
+                      {category === "music" ? (
+                        <div className="flex min-w-[260px] flex-col items-start gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            aria-expanded={playingUid === image.uid}
+                            onClick={() =>
+                              setPlayingUid((current) =>
+                                current === image.uid ? null : image.uid,
+                              )
+                            }
+                          >
+                            <PlayIcon data-icon="inline-start" />
+                            듣기
+                          </Button>
+                          {playingUid === image.uid ? (
+                            <audio
+                              controls
+                              preload="metadata"
+                              src={`/api/music/images/${image.uid}/file`}
+                              aria-label={`${image.filename} 재생`}
+                              className="w-full"
+                            />
+                          ) : null}
+                        </div>
+                      ) : (
+                        <a
+                          href={`/${category}/${image.uid}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-3"
+                        >
+                          <img
+                            src={image.thumbnailUrl}
+                            alt={image.filename}
+                            className="size-16 rounded-md border object-cover"
+                          />
+                          <ExternalLinkIcon data-icon="inline-end" />
+                        </a>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {image.uid}
