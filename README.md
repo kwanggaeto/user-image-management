@@ -153,3 +153,16 @@ curl -X POST "http://127.0.0.1:3000/api/library/images" \
 ```
 
 Supported categories are `library`, `nakdong`, `music`, and `school`.
+
+`music` accepts only MP3 (`.mp3`, `audio/mpeg`) and WAV (`.wav`,
+`audio/wav` or `audio/x-wav`) files. Music uploads store only the original R2
+object and do not generate a thumbnail.
+
+```bash
+curl -X POST "http://127.0.0.1:3000/api/music/images" \
+  -H "x-upload-token: local-upload-token" \
+  -F "file=@./track.mp3;type=audio/mpeg"
+```
+
+The music admin list exposes a `듣기` button, and `/music/{uid}` provides
+playback plus the original download.
