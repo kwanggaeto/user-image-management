@@ -27,6 +27,8 @@ describe("cleanup worker", () => {
       LIBRARY_ADMIN_PASSWORD: "password",
       NAKDONG_ADMIN_ID: "id",
       NAKDONG_ADMIN_PASSWORD: "password",
+      DAEGU_ADMIN_ID: "daegu-admin",
+      DAEGU_ADMIN_PASSWORD: "daegu-pass",
     } satisfies CloudflareEnv;
     await expect(worker.scheduled?.(controller, env)).resolves.toBeUndefined();
   });

@@ -36,6 +36,9 @@ export function getCloudflareEnv(): CloudflareEnv {
       NAKDONG_ADMIN_ID: process.env.NAKDONG_ADMIN_ID ?? "nakdong-admin",
       NAKDONG_ADMIN_PASSWORD:
         process.env.NAKDONG_ADMIN_PASSWORD ?? "nakdong-pass",
+      DAEGU_ADMIN_ID: process.env.DAEGU_ADMIN_ID ?? "daegu-admin",
+      DAEGU_ADMIN_PASSWORD:
+        process.env.DAEGU_ADMIN_PASSWORD ?? "daegu-pass",
     };
   }
 }

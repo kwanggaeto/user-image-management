@@ -118,6 +118,8 @@ const env = {
   LIBRARY_ADMIN_PASSWORD: "library-pass",
   NAKDONG_ADMIN_ID: "nakdong-admin",
   NAKDONG_ADMIN_PASSWORD: "nakdong-pass",
+  DAEGU_ADMIN_ID: "daegu-admin",
+  DAEGU_ADMIN_PASSWORD: "daegu-pass",
 } satisfies CloudflareEnv;
 
 function multipartRequest(
@@ -442,6 +444,47 @@ describe("handleLogin and session-gated list", () => {
     expect(response.status).toBe(200);
     expect(body.pageSize).toBe(20);
     expect(body.items[0].uid).toBe("abc123");
+  });
+
+  test("lists school images after login with the shared Daegu credential", async () => {
+    const repository = new FakeRepository();
+    await repository.insert({
+      uid: "school01",
+      category: "school",
+      filename: "class.jpg",
+      key: "images/school/school01/class.jpg",
+      thumbnailKey: null,
+      createAt: "2026-07-13T09:00:00.000+09:00",
+      expireAt: "2026-07-20T09:00:00.000+09:00",
+    });
+    const login = await handleLogin({
+      request: new Request("https://app.test/api/school/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          id: "daegu-admin",
+          password: "daegu-pass",
+        }),
+      }),
+      env,
+      categoryValue: "school",
+    });
+    const response = await handleImageList({
+      request: new Request("https://app.test/api/school/images", {
+        headers: { cookie: login.headers.get("set-cookie") ?? "" },
+      }),
+      env,
+      categoryValue: "school",
+      repository,
+    });
+    const body = (await response.json()) as {
+      items: Array<{ uid: string }>;
+    };
+
+    expect(login.status).toBe(200);
+    expect(response.status).toBe(200);
+    expect(body.items).toEqual([
+      expect.objectContaining({ uid: "school01" }),
+    ]);
   });
 });
 

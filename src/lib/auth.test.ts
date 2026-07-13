@@ -19,6 +19,8 @@ const env: CloudflareEnv = {
   LIBRARY_ADMIN_PASSWORD: "library-pass",
   NAKDONG_ADMIN_ID: "nakdong-admin",
   NAKDONG_ADMIN_PASSWORD: "nakdong-pass",
+  DAEGU_ADMIN_ID: "daegu-admin",
+  DAEGU_ADMIN_PASSWORD: "daegu-pass",
 };
 
 describe("getAdminCredential", () => {
@@ -30,6 +32,14 @@ describe("getAdminCredential", () => {
     expect(getAdminCredential(env, "nakdong")).toEqual({
       id: "nakdong-admin",
       password: "nakdong-pass",
+    });
+    expect(getAdminCredential(env, "music")).toEqual({
+      id: "daegu-admin",
+      password: "daegu-pass",
+    });
+    expect(getAdminCredential(env, "school")).toEqual({
+      id: "daegu-admin",
+      password: "daegu-pass",
     });
   });
 });
@@ -43,6 +53,12 @@ describe("sessions", () => {
   test("rejects a signed session for a different category", async () => {
     const cookie = await signSession(env, "library");
     await expect(verifySession(env, "nakdong", cookie)).resolves.toBe(false);
+  });
+
+  test("keeps music and school sessions category scoped", async () => {
+    const cookie = await signSession(env, "music");
+    await expect(verifySession(env, "music", cookie)).resolves.toBe(true);
+    await expect(verifySession(env, "school", cookie)).resolves.toBe(false);
   });
 
   test("rejects tampered session values", async () => {

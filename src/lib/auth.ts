@@ -17,6 +17,8 @@ export function getAdminCredential(
     | "LIBRARY_ADMIN_PASSWORD"
     | "NAKDONG_ADMIN_ID"
     | "NAKDONG_ADMIN_PASSWORD"
+    | "DAEGU_ADMIN_ID"
+    | "DAEGU_ADMIN_PASSWORD"
   >,
   category: Category,
 ): AdminCredential {
@@ -27,9 +29,16 @@ export function getAdminCredential(
     };
   }
 
+  if (category === "nakdong") {
+    return {
+      id: env.NAKDONG_ADMIN_ID,
+      password: env.NAKDONG_ADMIN_PASSWORD,
+    };
+  }
+
   return {
-    id: env.NAKDONG_ADMIN_ID,
-    password: env.NAKDONG_ADMIN_PASSWORD,
+    id: env.DAEGU_ADMIN_ID,
+    password: env.DAEGU_ADMIN_PASSWORD,
   };
 }
 

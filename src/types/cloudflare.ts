@@ -12,4 +12,6 @@ export interface CloudflareEnv {
   LIBRARY_ADMIN_PASSWORD: string;
   NAKDONG_ADMIN_ID: string;
   NAKDONG_ADMIN_PASSWORD: string;
+  DAEGU_ADMIN_ID: string;
+  DAEGU_ADMIN_PASSWORD: string;
 }
