@@ -87,32 +87,61 @@ describe("ImageViewer", () => {
     ).not.toBeInTheDocument();
   });
 
-  test.each(["music", "school"] as const)(
-    "uses the standard viewer for %s images",
-    (category) => {
-      render(
-        <ImageViewer
-          image={{
-            id: 3,
-            uid: `${category}01`,
-            category,
-            filename: `${category}.jpg`,
-            key: `images/${category}/${category}01/${category}.jpg`,
-            thumbnailKey: null,
-            createAt: "2026-07-13T09:00:00.000+09:00",
-            expireAt: "2026-07-20T09:00:00.000+09:00",
-          }}
-        />,
-      );
+  test("renders music as playable and downloadable audio", () => {
+    render(
+      <ImageViewer
+        image={{
+          id: 3,
+          uid: "music01",
+          category: "music",
+          filename: "track.mp3",
+          key: "images/music/music01/track.mp3",
+          thumbnailKey: null,
+          createAt: "2026-07-13T09:00:00.000+09:00",
+          expireAt: "2026-07-20T09:00:00.000+09:00",
+        }}
+      />,
+    );
 
-      expect(screen.getByRole("main")).toHaveClass("bg-background");
-      expect(screen.getByRole("main")).not.toHaveClass("bg-black");
-      expect(
-        screen.getByRole("link", { name: "원본 다운로드" }),
-      ).toHaveAttribute(
-        "href",
-        `/api/${category}/images/${category}01/download`,
-      );
-    },
-  );
+    const player = screen.getByLabelText("track.mp3 재생");
+    expect(player.tagName).toBe("AUDIO");
+    expect(player).toHaveAttribute("controls");
+    expect(player).toHaveAttribute("preload", "metadata");
+    expect(player).not.toHaveAttribute("autoplay");
+    expect(player).toHaveAttribute("src", "/api/music/images/music01/file");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("music01")).toBeInTheDocument();
+    expect(
+      screen.getByText("2026-07-13T09:00:00.000+09:00"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "원본 다운로드" }),
+    ).toHaveAttribute("href", "/api/music/images/music01/download");
+  });
+
+  test("keeps the standard image viewer for school", () => {
+    render(
+      <ImageViewer
+        image={{
+          id: 4,
+          uid: "school01",
+          category: "school",
+          filename: "school.jpg",
+          key: "images/school/school01/school.jpg",
+          thumbnailKey: null,
+          createAt: "2026-07-13T09:00:00.000+09:00",
+          expireAt: "2026-07-20T09:00:00.000+09:00",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("main")).toHaveClass("bg-background");
+    expect(screen.getByAltText("school.jpg")).toHaveAttribute(
+      "src",
+      "/api/school/images/school01/file",
+    );
+    expect(
+      screen.getByRole("link", { name: "원본 다운로드" }),
+    ).toHaveAttribute("href", "/api/school/images/school01/download");
+  });
 });
