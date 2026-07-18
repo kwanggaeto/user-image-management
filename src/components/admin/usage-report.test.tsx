@@ -29,4 +29,17 @@ describe("UsageReport", () => {
     expect(screen.getByText("2회")).toBeInTheDocument();
     expect(screen.getAllByText("3회").length).toBeGreaterThan(0);
   });
+
+  test("shows Daegu navigation on a grouped usage report", () => {
+    render(
+      <UsageReport
+        category="mbti"
+        initialSummary={{ period: "day", total: 0, buckets: [] }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("navigation", { name: "대구 관리자 섹션" }),
+    ).toBeInTheDocument();
+  });
 });

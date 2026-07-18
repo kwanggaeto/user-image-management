@@ -1,6 +1,6 @@
 # 고객 업로드 이미지 관리 서버
 
-Next.js 16, Cloudflare Workers, D1, R2 기반 이미지 관리 서버입니다. `library`, `nakdong`, `music`, `school` 네 채널을 같은 D1/R2 리소스에서 category로 분리합니다.
+Next.js 16, Cloudflare Workers, D1, R2 기반 이미지 관리 서버입니다. `library`, `nakdong`, `music`, `school`, `mbti` 다섯 채널을 같은 D1/R2 리소스에서 category로 분리합니다.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ DAEGU_ADMIN_PASSWORD=daegu-pass
 
 Cloudflare production에서는 `wrangler secret put` 또는 Dashboard secrets로 `SESSION_SECRET`, `UPLOAD_API_TOKEN`, 관리자 계정 값을 설정합니다.
 
-`music`과 `school`은 `DAEGU_ADMIN_ID`, `DAEGU_ADMIN_PASSWORD`를 공유하지만 관리자 세션은 카테고리별로 분리됩니다.
+`music`, `school`, `mbti`는 `DAEGU_ADMIN_ID`, `DAEGU_ADMIN_PASSWORD`와 하나의 대구 관리자 세션을 공유합니다. `/daegu/admin`에서 한 번 로그인한 뒤 세 목록을 선택하거나 목록 상단에서 전환할 수 있습니다.
 
 ## Cloudflare Resources
 
@@ -71,6 +71,8 @@ Local app:
 - `http://127.0.0.1:3000/nakdong/admin`
 - `http://127.0.0.1:3000/music/admin`
 - `http://127.0.0.1:3000/school/admin`
+- `http://127.0.0.1:3000/mbti/admin`
+- `http://127.0.0.1:3000/daegu/admin`
 
 카테고리 없이 루트 `http://127.0.0.1:3000/`에 접속하면 404 페이지를 반환합니다.
 
@@ -132,17 +134,9 @@ curl "http://localhost:8787/__scheduled"
 
 The cron expression in `wrangler.cleanup.jsonc` is `0 16 * * *`, which runs at 01:00 KST on the following calendar day because Cloudflare Cron uses UTC.
 
-## MBTI API
+## MBTI 이미지
 
-`GET /mbti/[type]`은 인증 없이 입력된 경로 파라미터를 그대로 JSON으로 반환합니다.
-
-```bash
-curl "http://127.0.0.1:3000/mbti/INTJ"
-```
-
-```json
-{ "type": "INTJ" }
-```
+MBTI는 다른 이미지 카테고리와 같은 업로드·목록·썸네일·공개 보기·다운로드·삭제 흐름을 사용합니다. 공개 이미지는 `/mbti/{uid}`에서 확인하고, 관리자는 `/mbti/admin`에서 확인합니다. 이전의 `/mbti/[type]` JSON echo 응답은 제거되었습니다.
 
 ## Upload API
 
@@ -152,7 +146,13 @@ curl -X POST "http://127.0.0.1:3000/api/library/images" \
   -F "file=@./photo.jpg"
 ```
 
-Supported categories are `library`, `nakdong`, `music`, and `school`.
+Supported categories are `library`, `nakdong`, `music`, `school`, and `mbti`.
+
+```bash
+curl -X POST "http://127.0.0.1:3000/api/mbti/images" \
+  -H "x-upload-token: local-upload-token" \
+  -F "file=@./portrait.png;type=image/png"
+```
 
 `music` accepts only MP3 (`.mp3`, `audio/mpeg`) and WAV (`.wav`,
 `audio/wav` or `audio/x-wav`) files. Music uploads store only the original R2

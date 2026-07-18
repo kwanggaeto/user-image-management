@@ -1,9 +1,14 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
 import { ImageList } from "@/components/admin/image-list";
 import { SESSION_COOKIE_NAME, verifyCategorySession } from "@/lib/auth";
-import { parseCategory, parsePage, parsePageSize } from "@/lib/categories";
+import {
+  isDaeguCategory,
+  parseCategory,
+  parsePage,
+  parsePageSize,
+} from "@/lib/categories";
 import { getCloudflareEnv } from "@/lib/cloudflare";
 import { createD1ImageRepository } from "@/lib/images/d1-repository";
 import { listImages } from "@/lib/images/service";
@@ -34,7 +39,10 @@ export default async function AdminPage({
   const authenticated = await verifyCategorySession(env, category, session);
 
   if (!authenticated) {
-    return <LoginForm category={category} />;
+    if (isDaeguCategory(category)) {
+      redirect("/daegu/admin");
+    }
+    return <LoginForm scope={category} />;
   }
 
   const resolvedSearchParams = await searchParams;

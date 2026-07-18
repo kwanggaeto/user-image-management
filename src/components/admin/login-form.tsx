@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import type { Category } from "@/lib/categories";
 
 interface LoginFormProps {
-  category: Category;
+  scope: Category | "daegu";
 }
 
 function readSavedAdminId(key: string): string {
@@ -36,8 +36,8 @@ function readSavedAdminId(key: string): string {
   }
 }
 
-export function LoginForm({ category }: LoginFormProps) {
-  const savedIdStorageKey = `uim:${category}:saved-admin-id`;
+export function LoginForm({ scope }: LoginFormProps) {
+  const savedIdStorageKey = `uim:${scope}:saved-admin-id`;
   const [id, setId] = useState(() => readSavedAdminId(savedIdStorageKey));
   const [password, setPassword] = useState("");
   const [rememberLogin, setRememberLogin] = useState(false);
@@ -52,7 +52,7 @@ export function LoginForm({ category }: LoginFormProps) {
     setError(null);
     setPending(true);
 
-    const response = await fetch(`/api/${category}/auth/login`, {
+    const response = await fetch(`/api/${scope}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
