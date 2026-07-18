@@ -257,11 +257,22 @@ async function parseMultipartUploadFile(
 }
 
 async function readUploadFile(request: Request): Promise<UploadedImageFile | null> {
-  if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  const normalizedContentType = contentType.toLowerCase();
+
+  if (normalizedContentType.includes("multipart/form-data")) {
     return parseMultipartUploadFile(request);
   }
 
-  const formData = await request.formData();
+  if (!normalizedContentType.includes("application/x-www-form-urlencoded")) {
+    return null;
+  }
+
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return null;
+  }
+
   const file = formData.get("file");
   if (!isUploadedFile(file)) {
     return null;

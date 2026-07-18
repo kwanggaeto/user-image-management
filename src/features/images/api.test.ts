@@ -201,6 +201,38 @@ function unquotedMultipartRequestWithoutFormData(
   return request;
 }
 
+function uppercaseMultipartRequestWithoutFormData(
+  url: string,
+  filename: string,
+  contentType: string,
+  content: string,
+): Request {
+  const boundary = "----uim-test-boundary";
+  const body = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${filename}"`,
+    `Content-Type: ${contentType}`,
+    "",
+    content,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+  const request = new Request(url, {
+    method: "POST",
+    headers: {
+      "x-upload-token": "upload-token",
+      "content-type": `Multipart/Form-Data; boundary=${boundary}`,
+    },
+    body,
+  });
+  Object.defineProperty(request, "formData", {
+    value: async () => {
+      throw new Error("formData unavailable");
+    },
+  });
+  return request;
+}
+
 describe("handleImageUpload", () => {
   test("rejects upload without token", async () => {
     const request = new Request("https://app.test/api/library/images", {
@@ -489,6 +521,49 @@ describe("handleImageUpload", () => {
 
     expect(response.status).toBe(201);
     expect(repository.rows[0]?.filename).toBe("photo.jpg");
+  });
+
+  test("parses multipart uploads when the content type uses uppercase letters", async () => {
+    const repository = new FakeRepository();
+    const response = await handleImageUpload({
+      request: uppercaseMultipartRequestWithoutFormData(
+        "https://app.test/api/library/images",
+        "photo.jpg",
+        "image/jpeg",
+        "image",
+      ),
+      env,
+      categoryValue: "library",
+      repository,
+      storage: new FakeStorage(),
+      thumbnailGenerator: new FakeThumbnailGenerator(),
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => "abc12345",
+      now: () => new Date("2026-07-09T00:00:00.000Z"),
+    });
+
+    expect(response.status).toBe(201);
+    expect(repository.rows[0]?.filename).toBe("photo.jpg");
+  });
+
+  test("rejects an unsupported upload content type instead of throwing", async () => {
+    const response = await handleImageUpload({
+      request: new Request("https://app.test/api/library/images", {
+        method: "POST",
+        headers: {
+          "x-upload-token": "upload-token",
+          "content-type": "image/png",
+        },
+        body: "image",
+      }),
+      env,
+      categoryValue: "library",
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Image file is required",
+    });
   });
 
   test("retries uid generation when the repository reports a duplicate uid", async () => {
