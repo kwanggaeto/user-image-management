@@ -60,7 +60,7 @@ export function ImageViewer({ image }: ImageViewerProps) {
           />
           <Button
             asChild
-            className="w-full rounded-none bg-emerald-800 text-white hover:bg-emerald-900"
+            className="h-18 w-full rounded-none bg-emerald-800 text-white hover:bg-emerald-900"
           >
             <a href={`/api/mbti/images/${image.uid}/download`}>
               <DownloadIcon data-icon="inline-start" />

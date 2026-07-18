@@ -174,7 +174,12 @@ describe("ImageViewer", () => {
       "href",
       "/api/mbti/images/intj01/download",
     );
-    expect(download).toHaveClass("w-full", "bg-emerald-800", "text-white");
+    expect(download).toHaveClass(
+      "h-18",
+      "w-full",
+      "bg-emerald-800",
+      "text-white",
+    );
     expect(screen.queryByText("intj01")).not.toBeInTheDocument();
   });
 });
