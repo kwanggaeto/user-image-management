@@ -144,4 +144,29 @@ describe("ImageViewer", () => {
       screen.getByRole("link", { name: "원본 다운로드" }),
     ).toHaveAttribute("href", "/api/school/images/school01/download");
   });
+
+  test("keeps the standard image viewer for MBTI", () => {
+    render(
+      <ImageViewer
+        image={{
+          id: 5,
+          uid: "intj01",
+          category: "mbti",
+          filename: "intj.png",
+          key: "images/mbti/intj01/intj.png",
+          thumbnailKey: "images/mbti/intj01/thumbnail.webp",
+          createAt: "2026-07-19T09:00:00.000+09:00",
+          expireAt: "2026-07-26T09:00:00.000+09:00",
+        }}
+      />,
+    );
+
+    expect(screen.getByAltText("intj.png")).toHaveAttribute(
+      "src",
+      "/api/mbti/images/intj01/file",
+    );
+    expect(
+      screen.getByRole("link", { name: "원본 다운로드" }),
+    ).toHaveAttribute("href", "/api/mbti/images/intj01/download");
+  });
 });

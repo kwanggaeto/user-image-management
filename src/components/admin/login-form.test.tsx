@@ -21,7 +21,7 @@ describe("LoginForm", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<LoginForm category="library" />);
+    render(<LoginForm scope="library" />);
 
     await userEvent.type(screen.getByLabelText("아이디"), "admin");
     await userEvent.type(screen.getByLabelText("비밀번호"), "pass");
@@ -33,11 +33,31 @@ describe("LoginForm", () => {
     );
   });
 
+  test("posts Daegu credentials and stores one Daegu saved id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<LoginForm scope="daegu" />);
+
+    await userEvent.type(screen.getByLabelText("아이디"), "daegu-admin");
+    await userEvent.type(screen.getByLabelText("비밀번호"), "pass");
+    await userEvent.click(screen.getByLabelText("아이디 저장"));
+    await userEvent.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/daegu/auth/login",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(window.localStorage.getItem("uim:daegu:saved-admin-id")).toBe(
+      "daegu-admin",
+    );
+  });
+
   test("posts remember login when the toggle is enabled", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<LoginForm category="library" />);
+    render(<LoginForm scope="library" />);
 
     await userEvent.type(screen.getByLabelText("아이디"), "admin");
     await userEvent.type(screen.getByLabelText("비밀번호"), "pass");
@@ -49,7 +69,7 @@ describe("LoginForm", () => {
   });
 
   test("arranges login option toggles horizontally", () => {
-    render(<LoginForm category="library" />);
+    render(<LoginForm scope="library" />);
 
     const options = screen.getByLabelText("로그인 유지").closest("div");
 
@@ -62,7 +82,7 @@ describe("LoginForm", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<LoginForm category="library" />);
+    render(<LoginForm scope="library" />);
 
     expect(await screen.findByDisplayValue("saved-admin")).toBeVisible();
     expect(screen.getByLabelText("아이디 저장")).toBeChecked();
@@ -81,7 +101,7 @@ describe("LoginForm", () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<LoginForm category="library" />);
+    render(<LoginForm scope="library" />);
 
     expect(await screen.findByDisplayValue("saved-admin")).toBeVisible();
     await userEvent.click(screen.getByLabelText("아이디 저장"));

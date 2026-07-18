@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BarChart3Icon } from "lucide-react";
+import { DaeguAdminNav } from "@/components/admin/daegu-admin-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Category } from "@/lib/categories";
+import { isDaeguCategory, type Category } from "@/lib/categories";
 import type { UsagePeriod, UsageSummary } from "@/lib/images/types";
 
 interface UsageReportProps {
@@ -36,6 +37,7 @@ const PERIOD_LABELS: Record<UsagePeriod, string> = {
 
 export function UsageReport({ category, initialSummary }: UsageReportProps) {
   const [summary, setSummary] = useState(initialSummary);
+  const daeguCategory = isDaeguCategory(category);
 
   async function loadPeriod(period: UsagePeriod) {
     const response = await fetch(`/api/${category}/usage?period=${period}`);
@@ -45,7 +47,9 @@ export function UsageReport({ category, initialSummary }: UsageReportProps) {
   }
 
   return (
-    <main className="min-h-dvh bg-background px-4 py-6 text-foreground md:px-8">
+    <>
+      {daeguCategory ? <DaeguAdminNav current={category} /> : null}
+      <main className="min-h-dvh bg-background px-4 py-6 text-foreground md:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2">
@@ -103,6 +107,7 @@ export function UsageReport({ category, initialSummary }: UsageReportProps) {
           </Table>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

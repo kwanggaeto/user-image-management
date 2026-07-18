@@ -1,13 +1,28 @@
-export const CATEGORIES = ["library", "nakdong", "music", "school"] as const;
+export const CATEGORIES = [
+  "library",
+  "nakdong",
+  "music",
+  "school",
+  "mbti",
+] as const;
 
 export type Category = (typeof CATEGORIES)[number];
+
+export const DAEGU_CATEGORIES = ["school", "music", "mbti"] as const;
+
+export type DaeguCategory = (typeof DAEGU_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   library: "국립중앙도서관",
   nakdong: "낙동강 개와 고양이 특별전",
-  music: "음악",
-  school: "학교",
+  music: "나만의 음악 만들기",
+  school: "나만의 학교 만들기",
+  mbti: "MBTI",
 };
+
+export function isDaeguCategory(value: Category): value is DaeguCategory {
+  return DAEGU_CATEGORIES.includes(value as DaeguCategory);
+}
 
 export function parseCategory(value: string): Category {
   if (isCategory(value)) {

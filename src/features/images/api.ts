@@ -1,12 +1,14 @@
 import {
+  adminScopeForCategory,
   createExpiredSessionCookie,
   createSessionCookie,
   readCookie,
   SESSION_COOKIE_NAME,
   signSession,
   verifyAdminCredential,
-  verifySession,
+  verifyCategorySession,
 } from "@/lib/auth";
+import type { AdminScope } from "@/lib/auth";
 import { parseCategory, parsePage, parsePageSize } from "@/lib/categories";
 import {
   createD1ImageRepository,
@@ -45,6 +47,11 @@ interface HandlerBase {
 interface UploadHandlerInput extends HandlerBase {
   createUid?: () => string;
   now?: () => Date;
+}
+
+interface AuthHandlerInput {
+  request: Request;
+  env: CloudflareEnv;
 }
 
 interface UploadedImageFile {
@@ -274,11 +281,13 @@ async function isAdminSession(input: HandlerBase): Promise<boolean> {
     input.request.headers.get("cookie"),
     SESSION_COOKIE_NAME,
   );
-  return verifySession(input.env, category, cookieValue);
+  return verifyCategorySession(input.env, category, cookieValue);
 }
 
-export async function handleLogin(input: HandlerBase): Promise<Response> {
-  const category = parseCategory(input.categoryValue);
+async function loginForScope(
+  input: AuthHandlerInput,
+  scope: AdminScope,
+): Promise<Response> {
   const body = (await input.request.json().catch(() => null)) as
     | { id?: string; password?: string; remember?: boolean }
     | null;
@@ -288,12 +297,12 @@ export async function handleLogin(input: HandlerBase): Promise<Response> {
   }
 
   if (
-    !verifyAdminCredential(input.env, category, body.id, body.password)
+    !verifyAdminCredential(input.env, scope, body.id, body.password)
   ) {
     return error("로그인 정보가 올바르지 않습니다.", 401);
   }
 
-  const session = await signSession(input.env, category);
+  const session = await signSession(input.env, scope);
   return json(
     { ok: true },
     {
@@ -307,6 +316,17 @@ export async function handleLogin(input: HandlerBase): Promise<Response> {
       },
     },
   );
+}
+
+export async function handleLogin(input: HandlerBase): Promise<Response> {
+  const category = parseCategory(input.categoryValue);
+  return loginForScope(input, adminScopeForCategory(category));
+}
+
+export function handleDaeguLogin(
+  input: AuthHandlerInput,
+): Promise<Response> {
+  return loginForScope(input, "daegu");
 }
 
 export async function handleLogout(): Promise<Response> {

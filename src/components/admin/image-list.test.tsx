@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ImageList } from "./image-list";
@@ -109,8 +109,8 @@ describe("ImageList", () => {
   });
 
   test.each([
-    ["music", "음악"],
-    ["school", "학교"],
+    ["music", "나만의 음악 만들기"],
+    ["school", "나만의 학교 만들기"],
   ] as const)("renders the %s category heading", (category, heading) => {
     render(
       <ImageList
@@ -125,7 +125,7 @@ describe("ImageList", () => {
       />,
     );
 
-    expect(screen.getByText(heading)).toBeInTheDocument();
+    expect(screen.getAllByText(heading).length).toBeGreaterThan(0);
   });
 
   test("shows one toggleable music player instead of thumbnails", async () => {
@@ -229,5 +229,58 @@ describe("ImageList", () => {
       method: "POST",
     });
     expect(window.location.reload).toHaveBeenCalled();
+  });
+
+  test("logs out through the shared Daegu endpoint and returns to the hub", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ImageList
+        category="mbti"
+        initialData={{
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          totalPages: 1,
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "로그아웃" }));
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/daegu/auth/logout", {
+      method: "POST",
+    });
+    expect(window.location.assign).toHaveBeenCalledWith("/daegu/admin");
+  });
+
+  test("shows Daegu section navigation with the current category selected", () => {
+    render(
+      <ImageList
+        category="mbti"
+        initialData={{
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+          totalPages: 1,
+        }}
+      />,
+    );
+
+    const navigation = screen.getByRole("navigation", {
+      name: "대구 관리자 섹션",
+    });
+    expect(
+      within(navigation).getByRole("link", { name: "나만의 학교 만들기" }),
+    ).toHaveAttribute("href", "/school/admin");
+    expect(
+      within(navigation).getByRole("link", { name: "나만의 음악 만들기" }),
+    ).toHaveAttribute("href", "/music/admin");
+    expect(
+      within(navigation).getByRole("link", { name: "MBTI" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });

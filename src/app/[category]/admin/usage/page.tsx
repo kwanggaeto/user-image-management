@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
 import { UsageReport } from "@/components/admin/usage-report";
-import { SESSION_COOKIE_NAME, verifySession } from "@/lib/auth";
-import { parseCategory } from "@/lib/categories";
+import { SESSION_COOKIE_NAME, verifyCategorySession } from "@/lib/auth";
+import { isDaeguCategory, parseCategory } from "@/lib/categories";
 import { getCloudflareEnv } from "@/lib/cloudflare";
 import { createD1UsageRepository } from "@/lib/images/d1-repository";
 import { summarizeUsage } from "@/lib/images/service";
@@ -27,10 +27,13 @@ export default async function UsagePage({ params }: UsagePageProps) {
   const env = getCloudflareEnv();
   const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const authenticated = await verifySession(env, category, session);
+  const authenticated = await verifyCategorySession(env, category, session);
 
   if (!authenticated) {
-    return <LoginForm category={category} />;
+    if (isDaeguCategory(category)) {
+      redirect("/daegu/admin");
+    }
+    return <LoginForm scope={category} />;
   }
 
   const summary = await summarizeUsage(

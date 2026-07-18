@@ -1,6 +1,8 @@
 import type { CloudflareEnv } from "@/types/cloudflare";
 import type { Category } from "./categories";
 
+export type AdminScope = "library" | "nakdong" | "daegu";
+
 export const SESSION_COOKIE_NAME = "uim_admin_session";
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 const REMEMBER_SESSION_MAX_AGE_SECONDS = DEFAULT_SESSION_MAX_AGE_SECONDS * 30;
@@ -8,6 +10,14 @@ const REMEMBER_SESSION_MAX_AGE_SECONDS = DEFAULT_SESSION_MAX_AGE_SECONDS * 30;
 export interface AdminCredential {
   id: string;
   password: string;
+}
+
+export function adminScopeForCategory(category: Category): AdminScope {
+  if (category === "library" || category === "nakdong") {
+    return category;
+  }
+
+  return "daegu";
 }
 
 export function getAdminCredential(
@@ -20,16 +30,16 @@ export function getAdminCredential(
     | "DAEGU_ADMIN_ID"
     | "DAEGU_ADMIN_PASSWORD"
   >,
-  category: Category,
+  scope: AdminScope,
 ): AdminCredential {
-  if (category === "library") {
+  if (scope === "library") {
     return {
       id: env.LIBRARY_ADMIN_ID,
       password: env.LIBRARY_ADMIN_PASSWORD,
     };
   }
 
-  if (category === "nakdong") {
+  if (scope === "nakdong") {
     return {
       id: env.NAKDONG_ADMIN_ID,
       password: env.NAKDONG_ADMIN_PASSWORD,
@@ -44,11 +54,11 @@ export function getAdminCredential(
 
 export function verifyAdminCredential(
   env: Parameters<typeof getAdminCredential>[0],
-  category: Category,
+  scope: AdminScope,
   id: string,
   password: string,
 ): boolean {
-  const credential = getAdminCredential(env, category);
+  const credential = getAdminCredential(env, scope);
   return credential.id === id && credential.password === password;
 }
 
@@ -75,16 +85,16 @@ async function hmac(secret: string, value: string): Promise<string> {
 
 export async function signSession(
   env: Pick<CloudflareEnv, "SESSION_SECRET">,
-  category: Category,
+  scope: AdminScope,
 ): Promise<string> {
-  const payload = `${category}.${Date.now()}`;
+  const payload = `${scope}.${Date.now()}`;
   const signature = await hmac(env.SESSION_SECRET, payload);
   return `${payload}.${signature}`;
 }
 
 export async function verifySession(
   env: Pick<CloudflareEnv, "SESSION_SECRET">,
-  category: Category,
+  scope: AdminScope,
   cookieValue: string | undefined,
 ): Promise<boolean> {
   if (!cookieValue) {
@@ -97,13 +107,21 @@ export async function verifySession(
   }
 
   const [cookieCategory, createdAt, signature] = parts;
-  if (cookieCategory !== category) {
+  if (cookieCategory !== scope) {
     return false;
   }
 
   const payload = `${cookieCategory}.${createdAt}`;
   const expected = await hmac(env.SESSION_SECRET, payload);
   return signature === expected;
+}
+
+export function verifyCategorySession(
+  env: Pick<CloudflareEnv, "SESSION_SECRET">,
+  category: Category,
+  cookieValue: string | undefined,
+): Promise<boolean> {
+  return verifySession(env, adminScopeForCategory(category), cookieValue);
 }
 
 export function readCookie(

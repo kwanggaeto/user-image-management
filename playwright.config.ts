@@ -13,7 +13,7 @@ export default defineConfig({
   webServer: {
     command:
       "npx wrangler d1 migrations apply user-image-management --local && npm run dev",
-    url: "http://127.0.0.1:3000/mbti/healthcheck",
+    url: "http://127.0.0.1:3000/daegu/admin",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

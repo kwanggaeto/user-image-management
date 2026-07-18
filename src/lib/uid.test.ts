@@ -20,6 +20,9 @@ describe("buildImageKey", () => {
     expect(buildImageKey("library", "abc123", "한글 photo.jpg")).toBe(
       "images/library/abc123/photo.jpg",
     );
+    expect(buildImageKey("mbti", "intj01", "portrait.png")).toBe(
+      "images/mbti/intj01/portrait.png",
+    );
   });
 });
 

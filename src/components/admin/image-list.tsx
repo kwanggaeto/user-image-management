@@ -10,6 +10,7 @@ import {
   PlayIcon,
   Trash2Icon,
 } from "lucide-react";
+import { DaeguAdminNav } from "@/components/admin/daegu-admin-nav";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +47,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CATEGORY_LABELS, type Category } from "@/lib/categories";
+import {
+  CATEGORY_LABELS,
+  isDaeguCategory,
+  type Category,
+} from "@/lib/categories";
 import type { PaginatedImages } from "@/lib/images/types";
 
 interface ImageListProps {
@@ -60,6 +65,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
   const [playingUid, setPlayingUid] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const daeguCategory = isDaeguCategory(category);
   const canGoPrev = data.page > 1;
   const canGoNext = data.page < data.totalPages;
 
@@ -92,12 +98,17 @@ export function ImageList({ category, initialData }: ImageListProps) {
     setLogoutError(null);
 
     try {
-      const response = await fetch(`/api/${category}/auth/logout`, {
+      const scope = daeguCategory ? "daegu" : category;
+      const response = await fetch(`/api/${scope}/auth/logout`, {
         method: "POST",
       });
 
       if (response.ok) {
-        window.location.reload();
+        if (daeguCategory) {
+          window.location.assign("/daegu/admin");
+        } else {
+          window.location.reload();
+        }
         return;
       }
     } catch {
@@ -109,7 +120,9 @@ export function ImageList({ category, initialData }: ImageListProps) {
   }
 
   return (
-    <main className="min-h-dvh bg-background px-4 py-6 text-foreground md:px-8">
+    <>
+      {daeguCategory ? <DaeguAdminNav current={category} /> : null}
+      <main className="min-h-dvh bg-background px-4 py-6 text-foreground md:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <header className="flex flex-col gap-3 border-b pb-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2">
@@ -299,6 +312,7 @@ export function ImageList({ category, initialData }: ImageListProps) {
           </div>
         </footer>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

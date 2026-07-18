@@ -17,6 +17,7 @@ import {
   handleImageList,
   handleImageThumbnail,
   handleImageUpload,
+  handleDaeguLogin,
   handleLogin,
   handleUsageSummary,
 } from "./api";
@@ -275,6 +276,38 @@ describe("handleImageUpload", () => {
     expect(usageRepository.records).toEqual([
       { category: "library", createdAt: "2026-07-09T09:00:00.000+09:00" },
     ]);
+  });
+
+  test("uploads MBTI images through the standard image pipeline", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    const thumbnailGenerator = new FakeThumbnailGenerator();
+    const response = await handleImageUpload({
+      request: multipartRequest(
+        "https://app.test/api/mbti/images",
+        "intj.png",
+        "image/png",
+        "image",
+      ),
+      env,
+      categoryValue: "mbti",
+      repository,
+      storage,
+      thumbnailGenerator,
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => "intj01",
+      now: () => new Date("2026-07-19T00:00:00.000Z"),
+    });
+    const body = (await response.json()) as { viewUrl: string };
+
+    expect(response.status).toBe(201);
+    expect(body.viewUrl).toBe("https://app.test/mbti/intj01");
+    expect(thumbnailGenerator.calls).toBe(1);
+    expect(repository.rows[0]).toMatchObject({
+      category: "mbti",
+      key: "images/mbti/intj01/intj.png",
+      thumbnailKey: "images/mbti/intj01/thumbnail.webp",
+    });
   });
 
   test.each([
@@ -613,6 +646,43 @@ describe("handleLogin and session-gated list", () => {
     expect(body.items).toEqual([
       expect.objectContaining({ uid: "school01" }),
     ]);
+  });
+
+  test("uses one Daegu login for protected MBTI image listing", async () => {
+    const repository = new FakeRepository();
+    await repository.insert({
+      uid: "intj01",
+      category: "mbti",
+      filename: "intj.png",
+      key: "images/mbti/intj01/intj.png",
+      thumbnailKey: "images/mbti/intj01/thumbnail.webp",
+      createAt: "2026-07-19T09:00:00.000+09:00",
+      expireAt: "2026-07-26T09:00:00.000+09:00",
+    });
+    const login = await handleDaeguLogin({
+      request: new Request("https://app.test/api/daegu/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          id: "daegu-admin",
+          password: "daegu-pass",
+        }),
+      }),
+      env,
+    });
+    const response = await handleImageList({
+      request: new Request("https://app.test/api/mbti/images", {
+        headers: { cookie: login.headers.get("set-cookie") ?? "" },
+      }),
+      env,
+      categoryValue: "mbti",
+      repository,
+    });
+
+    expect(login.status).toBe(200);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      items: [expect.objectContaining({ uid: "intj01" })],
+    });
   });
 });
 
