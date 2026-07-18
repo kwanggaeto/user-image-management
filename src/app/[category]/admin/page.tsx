@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
 import { ImageList } from "@/components/admin/image-list";
-import { SESSION_COOKIE_NAME, verifySession } from "@/lib/auth";
+import { SESSION_COOKIE_NAME, verifyCategorySession } from "@/lib/auth";
 import { parseCategory, parsePage, parsePageSize } from "@/lib/categories";
 import { getCloudflareEnv } from "@/lib/cloudflare";
 import { createD1ImageRepository } from "@/lib/images/d1-repository";
@@ -31,7 +31,7 @@ export default async function AdminPage({
   const env = getCloudflareEnv();
   const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const authenticated = await verifySession(env, category, session);
+  const authenticated = await verifyCategorySession(env, category, session);
 
   if (!authenticated) {
     return <LoginForm category={category} />;

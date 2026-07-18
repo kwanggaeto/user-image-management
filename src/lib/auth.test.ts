@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { CloudflareEnv } from "@/types/cloudflare";
 import {
+  adminScopeForCategory,
   createSessionCookie,
   getAdminCredential,
   signSession,
+  verifyCategorySession,
   verifySession,
 } from "./auth";
 
@@ -33,14 +35,18 @@ describe("getAdminCredential", () => {
       id: "nakdong-admin",
       password: "nakdong-pass",
     });
-    expect(getAdminCredential(env, "music")).toEqual({
+    expect(getAdminCredential(env, "daegu")).toEqual({
       id: "daegu-admin",
       password: "daegu-pass",
     });
-    expect(getAdminCredential(env, "school")).toEqual({
-      id: "daegu-admin",
-      password: "daegu-pass",
-    });
+  });
+
+  test("maps the three Daegu categories to one admin scope", () => {
+    expect(adminScopeForCategory("library")).toBe("library");
+    expect(adminScopeForCategory("nakdong")).toBe("nakdong");
+    expect(adminScopeForCategory("school")).toBe("daegu");
+    expect(adminScopeForCategory("music")).toBe("daegu");
+    expect(adminScopeForCategory("mbti")).toBe("daegu");
   });
 });
 
@@ -55,10 +61,24 @@ describe("sessions", () => {
     await expect(verifySession(env, "nakdong", cookie)).resolves.toBe(false);
   });
 
-  test("keeps music and school sessions category scoped", async () => {
-    const cookie = await signSession(env, "music");
-    await expect(verifySession(env, "music", cookie)).resolves.toBe(true);
-    await expect(verifySession(env, "school", cookie)).resolves.toBe(false);
+  test("allows one Daegu session across school music and MBTI only", async () => {
+    const cookie = await signSession(env, "daegu");
+
+    await expect(verifyCategorySession(env, "school", cookie)).resolves.toBe(
+      true,
+    );
+    await expect(verifyCategorySession(env, "music", cookie)).resolves.toBe(
+      true,
+    );
+    await expect(verifyCategorySession(env, "mbti", cookie)).resolves.toBe(
+      true,
+    );
+    await expect(verifyCategorySession(env, "library", cookie)).resolves.toBe(
+      false,
+    );
+    await expect(verifyCategorySession(env, "nakdong", cookie)).resolves.toBe(
+      false,
+    );
   });
 
   test("rejects tampered session values", async () => {

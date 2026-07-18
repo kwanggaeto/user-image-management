@@ -17,6 +17,7 @@ import {
   handleImageList,
   handleImageThumbnail,
   handleImageUpload,
+  handleDaeguLogin,
   handleLogin,
   handleUsageSummary,
 } from "./api";
@@ -645,6 +646,43 @@ describe("handleLogin and session-gated list", () => {
     expect(body.items).toEqual([
       expect.objectContaining({ uid: "school01" }),
     ]);
+  });
+
+  test("uses one Daegu login for protected MBTI image listing", async () => {
+    const repository = new FakeRepository();
+    await repository.insert({
+      uid: "intj01",
+      category: "mbti",
+      filename: "intj.png",
+      key: "images/mbti/intj01/intj.png",
+      thumbnailKey: "images/mbti/intj01/thumbnail.webp",
+      createAt: "2026-07-19T09:00:00.000+09:00",
+      expireAt: "2026-07-26T09:00:00.000+09:00",
+    });
+    const login = await handleDaeguLogin({
+      request: new Request("https://app.test/api/daegu/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          id: "daegu-admin",
+          password: "daegu-pass",
+        }),
+      }),
+      env,
+    });
+    const response = await handleImageList({
+      request: new Request("https://app.test/api/mbti/images", {
+        headers: { cookie: login.headers.get("set-cookie") ?? "" },
+      }),
+      env,
+      categoryValue: "mbti",
+      repository,
+    });
+
+    expect(login.status).toBe(200);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      items: [expect.objectContaining({ uid: "intj01" })],
+    });
   });
 });
 
