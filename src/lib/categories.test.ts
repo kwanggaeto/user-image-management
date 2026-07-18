@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
   CATEGORY_LABELS,
+  DAEGU_CATEGORIES,
+  isDaeguCategory,
   parseCategory,
   parsePage,
   parsePageSize,
@@ -12,6 +14,7 @@ describe("parseCategory", () => {
     expect(parseCategory("nakdong")).toBe("nakdong");
     expect(parseCategory("music")).toBe("music");
     expect(parseCategory("school")).toBe("school");
+    expect(parseCategory("mbti")).toBe("mbti");
   });
 
   test("rejects unknown category values", () => {
@@ -21,8 +24,17 @@ describe("parseCategory", () => {
   test("exposes admin UI headings for every category", () => {
     expect(CATEGORY_LABELS.library).toBe("국립중앙도서관");
     expect(CATEGORY_LABELS.nakdong).toBe("낙동강 개와 고양이 특별전");
-    expect(CATEGORY_LABELS.music).toBe("음악");
-    expect(CATEGORY_LABELS.school).toBe("학교");
+    expect(CATEGORY_LABELS.music).toBe("나만의 음악 만들기");
+    expect(CATEGORY_LABELS.school).toBe("나만의 학교 만들기");
+    expect(CATEGORY_LABELS.mbti).toBe("MBTI");
+  });
+
+  test("groups the three Daegu admin categories", () => {
+    expect(DAEGU_CATEGORIES).toEqual(["school", "music", "mbti"]);
+    expect(isDaeguCategory("school")).toBe(true);
+    expect(isDaeguCategory("music")).toBe(true);
+    expect(isDaeguCategory("mbti")).toBe(true);
+    expect(isDaeguCategory("library")).toBe(false);
   });
 });
 

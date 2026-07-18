@@ -277,6 +277,38 @@ describe("handleImageUpload", () => {
     ]);
   });
 
+  test("uploads MBTI images through the standard image pipeline", async () => {
+    const repository = new FakeRepository();
+    const storage = new FakeStorage();
+    const thumbnailGenerator = new FakeThumbnailGenerator();
+    const response = await handleImageUpload({
+      request: multipartRequest(
+        "https://app.test/api/mbti/images",
+        "intj.png",
+        "image/png",
+        "image",
+      ),
+      env,
+      categoryValue: "mbti",
+      repository,
+      storage,
+      thumbnailGenerator,
+      usageRepository: new FakeUsageRepository(),
+      createUid: () => "intj01",
+      now: () => new Date("2026-07-19T00:00:00.000Z"),
+    });
+    const body = (await response.json()) as { viewUrl: string };
+
+    expect(response.status).toBe(201);
+    expect(body.viewUrl).toBe("https://app.test/mbti/intj01");
+    expect(thumbnailGenerator.calls).toBe(1);
+    expect(repository.rows[0]).toMatchObject({
+      category: "mbti",
+      key: "images/mbti/intj01/intj.png",
+      thumbnailKey: "images/mbti/intj01/thumbnail.webp",
+    });
+  });
+
   test.each([
     ["track.mp3", "audio/mpeg", "audio/mpeg"],
     ["track.wav", "audio/wav", "audio/wav"],
