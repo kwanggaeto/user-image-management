@@ -145,7 +145,7 @@ describe("ImageViewer", () => {
     ).toHaveAttribute("href", "/api/school/images/school01/download");
   });
 
-  test("keeps the standard image viewer for MBTI", () => {
+  test("fits MBTI images to the viewport and provides a full-width dark-green download button", () => {
     render(
       <ImageViewer
         image={{
@@ -161,12 +161,20 @@ describe("ImageViewer", () => {
       />,
     );
 
-    expect(screen.getByAltText("intj.png")).toHaveAttribute(
+    const image = screen.getByAltText("intj.png");
+    const download = screen.getByRole("link", { name: "원본 다운로드" });
+
+    expect(image).toHaveAttribute(
       "src",
       "/api/mbti/images/intj01/file",
     );
-    expect(
-      screen.getByRole("link", { name: "원본 다운로드" }),
-    ).toHaveAttribute("href", "/api/mbti/images/intj01/download");
+    expect(image).toHaveClass("block", "h-auto", "w-full");
+    expect(image).not.toHaveClass("max-h-[78dvh]");
+    expect(download).toHaveAttribute(
+      "href",
+      "/api/mbti/images/intj01/download",
+    );
+    expect(download).toHaveClass("w-full", "bg-emerald-800", "text-white");
+    expect(screen.queryByText("intj01")).not.toBeInTheDocument();
   });
 });
