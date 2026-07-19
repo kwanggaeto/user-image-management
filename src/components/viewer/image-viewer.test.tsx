@@ -39,12 +39,24 @@ describe("ImageViewer", () => {
     );
     expect(main).not.toHaveClass("bg-black");
     expect(screen.getByText("abc12345")).toBeInTheDocument();
+    expect(screen.getByText("만료 기간")).toBeInTheDocument();
+    expect(document.querySelector("time")).toHaveAttribute(
+      "datetime",
+      "2026-07-16T09:00:00.000+09:00",
+    );
     expect(
-      screen.getByText("2026-07-09T09:00:00.000+09:00"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "원본 다운로드" })).toHaveAttribute(
+      screen.queryByText("2026-07-09T09:00:00.000+09:00"),
+    ).not.toBeInTheDocument();
+    const download = screen.getByRole("link", { name: "원본 다운로드" });
+    expect(download).toHaveAttribute(
       "href",
       "/api/library/images/abc12345/download",
+    );
+    expect(download).toHaveClass(
+      "h-12",
+      "w-full",
+      "bg-primary",
+      "text-primary-foreground",
     );
   });
 
@@ -111,9 +123,14 @@ describe("ImageViewer", () => {
     expect(player).toHaveAttribute("src", "/api/music/images/music01/file");
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByText("music01")).toBeInTheDocument();
+    expect(screen.getByText("만료 기간")).toBeInTheDocument();
+    expect(document.querySelector("time")).toHaveAttribute(
+      "datetime",
+      "2026-07-20T09:00:00.000+09:00",
+    );
     expect(
-      screen.getByText("2026-07-13T09:00:00.000+09:00"),
-    ).toBeInTheDocument();
+      screen.queryByText("2026-07-13T09:00:00.000+09:00"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "원본 다운로드" }),
     ).toHaveAttribute("href", "/api/music/images/music01/download");
