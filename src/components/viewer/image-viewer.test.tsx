@@ -29,7 +29,7 @@ describe("ImageViewer", () => {
     expect(image).toHaveClass(
       "max-h-[78dvh]",
       "w-full",
-      "rounded-md",
+      "rounded-lg",
       "object-contain",
     );
     expect(main).toHaveClass(
