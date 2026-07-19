@@ -2,6 +2,7 @@
 
 import { CalendarClockIcon, DownloadIcon, Music2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CATEGORY_LABELS } from "@/lib/categories";
 import type { ImageRecord } from "@/lib/images/types";
 
 const EXPIRE_DATE_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
@@ -68,6 +69,12 @@ export function ImageViewer({ image }: ImageViewerProps) {
       />
       <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-5 sm:px-6 sm:py-8">
         <div className="space-y-5">
+          <header className="px-1 pt-1">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {CATEGORY_LABELS[image.category]}
+            </h1>
+          </header>
+
           {image.category === "music" ? (
             <div className="relative flex min-h-72 items-center overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-700 px-5 py-10 text-white shadow-lg shadow-black/10">
               <div
@@ -108,15 +115,6 @@ export function ImageViewer({ image }: ImageViewerProps) {
           )}
 
           <div className="space-y-4 px-1 pb-1">
-            <div className="min-w-0">
-              <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                콘텐츠 ID
-              </p>
-              <p className="mt-1 truncate text-base font-semibold text-foreground">
-                {image.uid}
-              </p>
-            </div>
-
             <div className="flex items-center gap-3 border-t border-border/80 pt-4">
               <CalendarClockIcon
                 className="size-5 shrink-0 text-primary"

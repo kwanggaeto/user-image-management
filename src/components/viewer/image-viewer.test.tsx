@@ -38,7 +38,10 @@ describe("ImageViewer", () => {
       "text-foreground",
     );
     expect(main).not.toHaveClass("bg-black");
-    expect(screen.getByText("abc12345")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "국립중앙도서관" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("abc12345")).not.toBeInTheDocument();
     expect(screen.getByText("만료 기간")).toBeInTheDocument();
     expect(document.querySelector("time")).toHaveAttribute(
       "datetime",
@@ -122,7 +125,10 @@ describe("ImageViewer", () => {
     expect(player).not.toHaveAttribute("autoplay");
     expect(player).toHaveAttribute("src", "/api/music/images/music01/file");
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(screen.getByText("music01")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "나만의 음악 만들기" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("music01")).not.toBeInTheDocument();
     expect(screen.getByText("만료 기간")).toBeInTheDocument();
     expect(document.querySelector("time")).toHaveAttribute(
       "datetime",
@@ -153,6 +159,9 @@ describe("ImageViewer", () => {
     );
 
     expect(screen.getByRole("main")).toHaveClass("bg-background");
+    expect(
+      screen.getByRole("heading", { name: "나만의 학교 만들기" }),
+    ).toBeInTheDocument();
     expect(screen.getByAltText("school.jpg")).toHaveAttribute(
       "src",
       "/api/school/images/school01/file",
